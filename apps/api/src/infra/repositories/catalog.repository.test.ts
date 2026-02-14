@@ -27,15 +27,25 @@ describe('CatalogRepository', () => {
     });
 
     it('should execute Plan A when category, type, and keywords are present', async () => {
-        mockCollection.toArray.mockResolvedValueOnce([{ title: 'Product A' }, { title: 'A2' }, { title: 'A3' }, { title: 'A4' }, { title: 'A5' }]);
+        // Plan TEXT returns 0
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        // Plan A returns results
+        mockCollection.toArray.mockResolvedValueOnce([
+            { title: 'Product A', description: 'desc', category: 'furn', type: 'chair', price: 100 },
+            { title: 'A2', description: 'desc', category: 'furn', type: 'chair', price: 100 },
+            { title: 'A3', description: 'desc', category: 'furn', type: 'chair', price: 100 },
+            { title: 'A4', description: 'desc', category: 'furn', type: 'chair', price: 100 },
+            { title: 'A5', description: 'desc', category: 'furn', type: 'chair', price: 100 }
+        ]);
 
-        const results = await repository.findCandidates({
+        const { products, plan } = await repository.findCandidates({
             category: 'furniture',
             type: 'chair',
             keywords: ['wood']
         });
 
-        expect(results).toHaveLength(5);
+        expect(products).toHaveLength(5);
+        expect(plan).toBe('A');
         expect(mockCollection.find).toHaveBeenCalledWith(
             expect.objectContaining({
                 category: 'furniture',
@@ -47,20 +57,28 @@ describe('CatalogRepository', () => {
     });
 
     it('should fallback to Plan B if Plan A returns too few results', async () => {
-        // Plan A returns 1 (below threshold of 5)
-        mockCollection.toArray.mockResolvedValueOnce([{ title: 'A' }]);
-        // Plan B returns 6 (satisfies threshold)
-        mockCollection.toArray.mockResolvedValueOnce(new Array(6).fill({ title: 'B' }));
+        // Plan TEXT returns 0
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        // Plan A returns 1 (below threshold of 10)
+        mockCollection.toArray.mockResolvedValueOnce([{
+            title: 'A', description: 'desc', category: 'furn', type: 'chair', price: 100
+        }]);
+        // Plan B returns 12 (satisfies threshold)
+        mockCollection.toArray.mockResolvedValueOnce(new Array(12).fill({
+            title: 'B', description: 'desc', category: 'furn', type: 'chair', price: 100
+        }));
 
-        const results = await repository.findCandidates({
+        const { products, plan } = await repository.findCandidates({
             category: 'furniture',
             type: 'chair',
-            keywords: ['wood']
+            keywords: ['wood'],
+            minCandidates: 10
         });
 
-        expect(results).toHaveLength(6);
-        // Second call should be Plan B (category + keywords, no type)
-        expect(mockCollection.find).toHaveBeenNthCalledWith(2,
+        expect(products).toHaveLength(12);
+        expect(plan).toBe('B');
+        // TEXT call (1) + Plan A (2) + Plan B (3)
+        expect(mockCollection.find).toHaveBeenNthCalledWith(3,
             expect.objectContaining({
                 category: 'furniture',
                 $or: expect.any(Array)
@@ -70,13 +88,19 @@ describe('CatalogRepository', () => {
     });
 
     it('should execute Plan C if no category/type provided but keywords exist', async () => {
-        mockCollection.toArray.mockResolvedValue([{ title: 'Product C' }]);
+        // Plan TEXT returns 0
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        // Plan C returns something
+        mockCollection.toArray.mockResolvedValueOnce([{
+            title: 'Product C', description: 'desc', category: 'furn', type: 'chair', price: 100
+        }]);
 
-        const results = await repository.findCandidates({
+        const { products, plan } = await repository.findCandidates({
             keywords: ['chair']
         });
 
-        expect(results).toHaveLength(1);
+        expect(products).toHaveLength(1);
+        expect(plan).toBe('C');
         expect(mockCollection.find).toHaveBeenCalledWith(
             expect.objectContaining({
                 $or: expect.any(Array)
@@ -86,20 +110,24 @@ describe('CatalogRepository', () => {
     });
 
     it('should execute Plan D as last resort if category/type exist but keywords found nothing', async () => {
-        // Plan A, B, C all empty
+        // Plan TEXT, A, B, C all empty
+        mockCollection.toArray.mockResolvedValueOnce([]);
         mockCollection.toArray.mockResolvedValueOnce([]);
         mockCollection.toArray.mockResolvedValueOnce([]);
         mockCollection.toArray.mockResolvedValueOnce([]);
         // Plan D returns something
-        mockCollection.toArray.mockResolvedValueOnce([{ title: 'D' }]);
+        mockCollection.toArray.mockResolvedValueOnce([{
+            title: 'D', description: 'desc', category: 'furn', type: 'chair', price: 100
+        }]);
 
-        const results = await repository.findCandidates({
+        const { products, plan } = await repository.findCandidates({
             category: 'furniture',
             type: 'chair',
             keywords: ['nonexistent']
         });
 
-        expect(results).toHaveLength(1);
+        expect(products).toHaveLength(1);
+        expect(plan).toBe('D');
         expect(mockCollection.find).toHaveBeenLastCalledWith(
             {
                 $or: [

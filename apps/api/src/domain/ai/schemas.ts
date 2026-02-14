@@ -62,6 +62,8 @@ export const ScoredCandidateSchema = CandidateSummarySchema.extend({
 
 export type ScoredCandidate = z.infer<typeof ScoredCandidateSchema>;
 
+export type RetrievalPlan = 'A' | 'B' | 'C' | 'D' | 'TEXT';
+
 export interface SearchTimings {
     totalMs: number;
     stage1Ms: number;
@@ -84,6 +86,7 @@ export interface SearchResponse {
         requestId: string;
         timings: SearchTimings;
         notices: SearchNotice[];
+        retrievalPlan?: RetrievalPlan;
     };
 }
 

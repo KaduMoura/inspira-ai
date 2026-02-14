@@ -29,10 +29,13 @@ describe('Search Pipeline Logic', () => {
         };
 
         mockRepo = {
-            findCandidates: vi.fn().mockResolvedValue([
-                { _id: '1', title: 'Black Wood Chair', category: 'Chair', type: 'Dining Chair', price: 300, description: 'Modern chair', width: 50, height: 90, depth: 50 },
-                { _id: '2', title: 'Luxury Sofa', category: 'Sofa', type: 'Sofa', price: 1200, description: 'Rich sofa', width: 200, height: 80, depth: 90 }
-            ])
+            findCandidates: vi.fn().mockResolvedValue({
+                products: [
+                    { _id: '1', title: 'Black Wood Chair', category: 'Chair', type: 'Dining Chair', price: 300, description: 'Modern chair', width: 50, height: 90, depth: 50 },
+                    { _id: '2', title: 'Luxury Sofa', category: 'Sofa', type: 'Sofa', price: 1200, description: 'Rich sofa', width: 200, height: 80, depth: 90 }
+                ],
+                plan: 'A'
+            })
         };
 
         mockReranker = {

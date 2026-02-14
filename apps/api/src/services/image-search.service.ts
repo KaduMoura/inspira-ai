@@ -116,13 +116,13 @@ export class ImageSearchService {
             notices.push({ code: 'LOW_CONFIDENCE_TYPE', message: 'Low confidence in specific type identification.' });
         }
 
-        // 2. Initial Retrieval (Heuristic Plans)
+        // Initial Retrieval (Heuristic Plans)
         const mongoStart = Date.now();
 
         // Confidence-driven retrieval: use Plan D if confidence is too low
         const useStrictFilters = signals.categoryGuess.confidence >= config.minCategoryConfidence;
 
-        const initialCandidates = await this.catalogRepository.findCandidates({
+        const { products: initialCandidates, plan: retrievalPlan } = await this.catalogRepository.findCandidates({
             category: useStrictFilters ? signals.categoryGuess.value : undefined,
             type: useStrictFilters && signals.typeGuess.confidence >= config.minTypeConfidence ? signals.typeGuess.value : undefined,
             keywords: signals.keywords,
@@ -136,13 +136,14 @@ export class ImageSearchService {
             const response = {
                 query: { prompt: userPrompt, signals },
                 results: [],
-                meta: { requestId, timings, notices }
+                meta: { requestId, timings, notices, retrievalPlan }
             };
 
             this.logger?.info('[Search Summary] No candidates found', {
                 requestId,
                 timings,
-                counts: { retrieved: 0, reranked: 0, returned: 0 }
+                counts: { retrieved: 0, reranked: 0, returned: 0 },
+                retrievalPlan
             });
 
             this.telemetryService.record({
@@ -150,6 +151,7 @@ export class ImageSearchService {
                 timings,
                 counts: { retrieved: 0, reranked: 0, returned: 0 },
                 fallbacks: { visionFallback: false, rerankFallback: false, broadRetrieval: false },
+                retrievalPlan,
                 error: null
             });
 
@@ -246,7 +248,8 @@ export class ImageSearchService {
                 rerankEnabled: config.enableLLMRerank,
                 hasPrompt: !!userPrompt,
                 hasClientContext: !!clientContext,
-                fallbackVision: signals.qualityFlags.lowConfidence || false
+                fallbackVision: signals.qualityFlags.lowConfidence || false,
+                retrievalPlan
             }
         });
 
@@ -256,7 +259,8 @@ export class ImageSearchService {
             meta: {
                 requestId,
                 timings,
-                notices
+                notices,
+                retrievalPlan
             }
         };
 
@@ -272,8 +276,9 @@ export class ImageSearchService {
             fallbacks: {
                 visionFallback: signals.qualityFlags.lowConfidence || false,
                 rerankFallback: notices.some(n => n.code === 'RERANK_FAILED'),
-                broadRetrieval: !useStrictFilters
+                broadRetrieval: retrievalPlan === 'C' || retrievalPlan === 'D'
             },
+            retrievalPlan,
             error: null
         });
 

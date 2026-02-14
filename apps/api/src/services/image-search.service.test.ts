@@ -67,7 +67,7 @@ describe('ImageSearchService', () => {
     describe('searchByImage', () => {
         it('should complete full pipeline successfully', async () => {
             vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
-            vi.mocked(mockRepo.findCandidates).mockResolvedValue(mockProducts);
+            vi.mocked(mockRepo.findCandidates).mockResolvedValue({ products: mockProducts, plan: 'A' });
             vi.mocked(mockReranker.rerank).mockResolvedValue({
                 rankedIds: ['507f1f77bcf86cd799439012', '507f1f77bcf86cd799439011'],
                 reasons: { '507f1f77bcf86cd799439012': ['better match'] }
@@ -84,7 +84,7 @@ describe('ImageSearchService', () => {
 
         it('should return empty results if repository finds nothing', async () => {
             vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
-            vi.mocked(mockRepo.findCandidates).mockResolvedValue([]);
+            vi.mocked(mockRepo.findCandidates).mockResolvedValue({ products: [], plan: 'D' });
 
             const result = await service.searchByImage(Buffer.from(''), 'image/jpeg', 'key', 'req1');
 
@@ -95,7 +95,7 @@ describe('ImageSearchService', () => {
 
         it('should fallback to heuristic order if reranking fails', async () => {
             vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
-            vi.mocked(mockRepo.findCandidates).mockResolvedValue(mockProducts);
+            vi.mocked(mockRepo.findCandidates).mockResolvedValue({ products: mockProducts, plan: 'A' });
             vi.mocked(mockReranker.rerank).mockRejectedValue(new Error('AI Failed'));
 
             const result = await service.searchByImage(Buffer.from(''), 'image/jpeg', 'key', 'req1');

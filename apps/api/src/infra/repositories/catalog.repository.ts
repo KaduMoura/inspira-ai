@@ -1,5 +1,6 @@
 import { Db, Collection, Filter, ObjectId } from 'mongodb';
-import { Product, SearchCriteria } from '../../domain/product';
+import { Product, SearchCriteria, ProductSchema } from '../../domain/product';
+import { RetrievalPlan } from '../../domain/ai/schemas';
 import { getDb } from '../db';
 
 export class CatalogRepository {
@@ -12,41 +13,87 @@ export class CatalogRepository {
     /**
      * Main candidate retrieval logic with relaxation ladder.
      */
-    async findCandidates(criteria: SearchCriteria): Promise<Product[]> {
+    async findCandidates(criteria: SearchCriteria): Promise<{ products: Product[], plan: RetrievalPlan }> {
         const limit = criteria.limit || 60;
         const minCandidates = criteria.minCandidates || 10;
 
+        // Try Plan TEXT first if keywords available
+        if (criteria.keywords?.length) {
+            try {
+                const results = await this.executePlanText(criteria, limit);
+                if (results.length >= minCandidates) return { products: results, plan: 'TEXT' };
+            } catch (error) {
+                // $text search might fail if index is missing (read-only prevents us from creating it)
+                // Fallback silently to regex plans
+            }
+        }
+
         // Keep track of best results so far
         let lastResults: Product[] = [];
+        let lastPlan: RetrievalPlan = 'D';
 
         // Plan A: Category + Type + Keywords (High Precision)
         if (criteria.category && criteria.type && criteria.keywords?.length) {
-            lastResults = await this.executePlanA(criteria, limit);
-            if (lastResults.length >= minCandidates) return lastResults;
+            const results = await this.executePlanA(criteria, limit);
+            if (results.length >= minCandidates) return { products: results, plan: 'A' };
+            lastResults = results;
+            lastPlan = 'A';
         }
 
         // Plan B: Category + Keywords (Balanced)
         if (criteria.category && criteria.keywords?.length) {
             const results = await this.executePlanB(criteria, limit);
-            if (results.length >= minCandidates) return results;
-            if (results.length > lastResults.length) lastResults = results;
+            if (results.length >= minCandidates) return { products: results, plan: 'B' };
+            if (results.length > lastResults.length) {
+                lastResults = results;
+                lastPlan = 'B';
+            }
         }
 
         // Plan C: Broad Keyword Search (Recall focus)
         if (criteria.keywords?.length) {
             const results = await this.executePlanC(criteria, limit);
-            if (results.length >= minCandidates) return results;
-            if (results.length > lastResults.length) lastResults = results;
+            if (results.length >= minCandidates) return { products: results, plan: 'C' };
+            if (results.length > lastResults.length) {
+                lastResults = results;
+                lastPlan = 'C';
+            }
         }
 
         // Plan D: Category + Type matching (Fallback)
         if (criteria.category || criteria.type) {
             const results = await this.executePlanD(criteria, limit);
-            if (results.length >= minCandidates) return results;
-            if (results.length > lastResults.length) lastResults = results;
+            if (results.length >= minCandidates) return { products: results, plan: 'D' };
+            if (results.length > lastResults.length) {
+                lastResults = results;
+                lastPlan = 'D';
+            }
         }
 
-        return lastResults;
+        return { products: lastResults, plan: lastPlan };
+    }
+
+    private async validateAndParse(docs: any[]): Promise<Product[]> {
+        const validProducts: Product[] = [];
+        for (const doc of docs) {
+            const result = ProductSchema.safeParse(doc);
+            if (result.success) {
+                validProducts.push(result.data);
+            } else {
+                // Log and discard invalid docs to prevent pipeline crashes
+                console.warn(`[CatalogRepository] Discarding invalid product document ${doc._id}:`, result.error.format());
+            }
+        }
+        return validProducts;
+    }
+
+    private async executePlanText(criteria: SearchCriteria, limit: number): Promise<Product[]> {
+        if (!criteria.keywords?.length) return [];
+        const query: Filter<Product> = {
+            $text: { $search: criteria.keywords.join(' ') }
+        };
+        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        return this.validateAndParse(docs);
     }
 
     private getProjection() {
@@ -75,7 +122,8 @@ export class CatalogRepository {
             })) || []
         };
 
-        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        return this.validateAndParse(docs);
     }
 
     private async executePlanB(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -89,7 +137,8 @@ export class CatalogRepository {
             })) || []
         };
 
-        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        return this.validateAndParse(docs);
     }
 
     private async executePlanC(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -104,7 +153,8 @@ export class CatalogRepository {
             }))
         };
 
-        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        return this.validateAndParse(docs);
     }
 
     private async executePlanD(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -116,7 +166,8 @@ export class CatalogRepository {
 
         const query: Filter<Product> = { $or: filters };
 
-        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        return this.validateAndParse(docs);
     }
 
     async findById(id: string): Promise<Product | null> {

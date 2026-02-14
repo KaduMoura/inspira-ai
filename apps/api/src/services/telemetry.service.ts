@@ -15,6 +15,7 @@ export interface TelemetryEvent {
         broadRetrieval: boolean;
     };
     error: string | null;
+    retrievalPlan?: string;
     feedback?: {
         items: Record<string, 'thumbs_up' | 'thumbs_down'>;
         notes?: string;
