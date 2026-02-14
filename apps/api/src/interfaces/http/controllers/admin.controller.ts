@@ -1,5 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { appConfigService } from '../../../config/app-config.service';
+import { telemetryService } from '../../../services/telemetry.service';
 
 export class AdminController {
     /**
@@ -48,6 +49,21 @@ export class AdminController {
             data: config,
             message: 'Configuration reset to defaults',
             meta: { requestId: request.id },
+            error: null
+        };
+    }
+
+    /**
+     * Get recent search telemetry (last 50 executions)
+     */
+    async getTelemetry(request: FastifyRequest, reply: FastifyReply) {
+        const events = telemetryService.getEvents();
+        return {
+            data: events,
+            meta: {
+                requestId: request.id,
+                count: events.length
+            },
             error: null
         };
     }

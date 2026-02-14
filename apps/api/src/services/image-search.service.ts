@@ -4,6 +4,7 @@ import { CatalogRepository } from '../infra/repositories/catalog.repository';
 import { Product } from '../domain/product';
 import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
 import { AppConfigService } from '../config/app-config.service';
+import { TelemetryService } from './telemetry.service';
 
 export interface Logger {
     info(msg: string, ...args: unknown[]): void;
@@ -18,6 +19,7 @@ export class ImageSearchService {
         private readonly reranker: CatalogReranker,
         private readonly heuristicScorer: HeuristicScorer,
         private readonly configService: AppConfigService,
+        private readonly telemetryService: TelemetryService,
         private readonly logger?: Logger
     ) { }
 
@@ -75,6 +77,14 @@ export class ImageSearchService {
                 timings,
                 counts: { retrieved: 0, reranked: 0, returned: 0 },
                 flags: { fallbackVision: false, fallbackRerank: false }
+            });
+
+            this.telemetryService.record({
+                requestId,
+                timings,
+                counts: { retrieved: 0, reranked: 0, returned: 0 },
+                fallbacks: { visionFallback: false, rerankFallback: false, broadRetrieval: false },
+                error: null
             });
 
             return response;
@@ -154,7 +164,7 @@ export class ImageSearchService {
             }
         });
 
-        return {
+        const response: SearchResponse = {
             query: { prompt: userPrompt, signals },
             results,
             meta: {
@@ -163,5 +173,24 @@ export class ImageSearchService {
                 notices
             }
         };
+
+        // Record Telemetry
+        this.telemetryService.record({
+            requestId,
+            timings,
+            counts: {
+                retrieved: initialCandidates.length,
+                reranked: candidatesRerankedCount,
+                returned: results.length
+            },
+            fallbacks: {
+                visionFallback: notices.some(n => n.code === 'FALLBACK_VISION'),
+                rerankFallback: notices.some(n => n.code === 'RERANK_FAILED'),
+                broadRetrieval: notices.some(n => n.code === 'FALLBACK_BROAD_RETRIEVAL')
+            },
+            error: null
+        });
+
+        return response;
     }
 }

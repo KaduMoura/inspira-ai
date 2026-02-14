@@ -35,7 +35,7 @@ describe('Search Routes Integration', () => {
     it('should return 400 if x-ai-api-key is missing', async () => {
         const response = await server.inject({
             method: 'POST',
-            url: '/image',
+            url: '/',
         });
 
         expect(response.statusCode).toBe(400);
@@ -45,7 +45,7 @@ describe('Search Routes Integration', () => {
     it('should return 400 if not multipart', async () => {
         const response = await server.inject({
             method: 'POST',
-            url: '/image',
+            url: '/',
             headers: {
                 'x-ai-api-key': 'test-key'
             }
@@ -68,7 +68,7 @@ describe('Search Routes Integration', () => {
 
         const response = await server.inject({
             method: 'POST',
-            url: '/image',
+            url: '/',
             headers: {
                 'x-ai-api-key': 'test-key',
                 'content-type': `multipart/form-data; boundary=${boundary}`
@@ -93,7 +93,7 @@ describe('Search Routes Integration', () => {
 
         const response = await server.inject({
             method: 'POST',
-            url: '/image',
+            url: '/',
             headers: {
                 'x-ai-api-key': 'test-key',
                 'content-type': `multipart/form-data; boundary=${boundary}`
@@ -133,7 +133,7 @@ describe('Search Routes Integration', () => {
 
         const response = await server.inject({
             method: 'POST',
-            url: '/image',
+            url: '/',
             headers: {
                 'x-ai-api-key': 'test-key',
                 'content-type': `multipart/form-data; boundary=${boundary}`

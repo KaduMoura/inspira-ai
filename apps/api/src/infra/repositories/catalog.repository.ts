@@ -16,30 +16,37 @@ export class CatalogRepository {
         const limit = criteria.limit || 50;
         const minCandidates = 5;
 
+        // Keep track of best results so far
+        let lastResults: Product[] = [];
+
         // Plan A: Category + Type + Keywords (High Precision)
         if (criteria.category && criteria.type && criteria.keywords?.length) {
-            const results = await this.executePlanA(criteria, limit);
-            if (results.length >= minCandidates) return results;
+            lastResults = await this.executePlanA(criteria, limit);
+            if (lastResults.length >= minCandidates) return lastResults;
         }
 
         // Plan B: Category + Keywords
         if (criteria.category && criteria.keywords?.length) {
             const results = await this.executePlanB(criteria, limit);
             if (results.length >= minCandidates) return results;
+            if (results.length > lastResults.length) lastResults = results;
         }
 
         // Plan C: Broad Keyword Search (Recall focus)
         if (criteria.keywords?.length) {
             const results = await this.executePlanC(criteria, limit);
             if (results.length >= minCandidates) return results;
+            if (results.length > lastResults.length) lastResults = results;
         }
 
         // Plan D: Category + Type matching (if all keyword searches failed)
         if (criteria.category || criteria.type) {
-            return this.executePlanD(criteria, limit);
+            const results = await this.executePlanD(criteria, limit);
+            if (results.length >= minCandidates) return results;
+            if (results.length > lastResults.length) lastResults = results;
         }
 
-        return [];
+        return lastResults;
     }
 
     private async executePlanA(criteria: SearchCriteria, limit: number): Promise<Product[]> {

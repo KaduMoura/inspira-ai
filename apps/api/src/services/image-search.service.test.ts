@@ -2,15 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImageSearchService } from './image-search.service';
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
-import { ImageSignals } from '../domain/ai/schemas';
+import { TelemetryService } from './telemetry.service';
+import { ImageSignals, MatchBand } from '../domain/ai/schemas';
 import { Product } from '../domain/product';
 import { ObjectId } from 'mongodb';
+import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
+import { AppConfigService } from '../config/app-config.service';
+import { DEFAULT_ADMIN_CONFIG } from '../domain/config.schema';
 
 describe('ImageSearchService', () => {
     let service: ImageSearchService;
     let mockVision: VisionSignalExtractor;
     let mockRepo: CatalogRepository;
     let mockReranker: CatalogReranker;
+    let mockTelemetry: TelemetryService;
+    let mockScorer: HeuristicScorer;
+    let mockConfig: AppConfigService;
 
     const mockSignals: ImageSignals = {
         categoryGuess: { value: 'furniture', confidence: 0.9 },
@@ -33,13 +40,28 @@ describe('ImageSearchService', () => {
             findCandidates: vi.fn(),
             findById: vi.fn(),
             getSample: vi.fn(),
-            collection: {} as unknown
         } as unknown as CatalogRepository;
         mockReranker = {
             rerank: vi.fn()
         };
+        mockTelemetry = {
+            record: vi.fn(),
+            getEvents: vi.fn(),
+            clear: vi.fn()
+        } as unknown as TelemetryService;
+        mockScorer = new HeuristicScorer();
+        mockConfig = {
+            getConfig: vi.fn().mockReturnValue(DEFAULT_ADMIN_CONFIG)
+        } as unknown as AppConfigService;
 
-        service = new ImageSearchService(mockVision, mockRepo, mockReranker);
+        service = new ImageSearchService(
+            mockVision,
+            mockRepo,
+            mockReranker,
+            mockScorer,
+            mockConfig,
+            mockTelemetry
+        );
     });
 
     describe('searchByImage', () => {
@@ -53,50 +75,36 @@ describe('ImageSearchService', () => {
 
             const result = await service.searchByImage(Buffer.from(''), 'image/jpeg', 'key', 'req1');
 
-            expect(result.signals).toEqual(mockSignals);
-            expect(result.candidates).toHaveLength(2);
-            expect(result.candidates[0]._id?.toString()).toBe('507f1f77bcf86cd799439012');
-            expect(result.candidates[1]._id?.toString()).toBe('507f1f77bcf86cd799439011');
+            expect(result.query.signals).toEqual(mockSignals);
+            expect(result.results).toHaveLength(2);
+            expect(result.results[0].id).toBe('507f1f77bcf86cd799439012');
+            expect(result.results[1].id).toBe('507f1f77bcf86cd799439011');
+            expect(mockTelemetry.record).toHaveBeenCalled();
         });
 
-        it('should return empty candidates if repository finds nothing', async () => {
+        it('should return empty results if repository finds nothing', async () => {
             vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
             vi.mocked(mockRepo.findCandidates).mockResolvedValue([]);
 
             const result = await service.searchByImage(Buffer.from(''), 'image/jpeg', 'key', 'req1');
 
-            expect(result.candidates).toHaveLength(0);
+            expect(result.results).toHaveLength(0);
             expect(mockReranker.rerank).not.toHaveBeenCalled();
+            expect(mockTelemetry.record).toHaveBeenCalled();
         });
 
-        it('should fallback to initial order if reranking fails', async () => {
+        it('should fallback to heuristic order if reranking fails', async () => {
             vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
             vi.mocked(mockRepo.findCandidates).mockResolvedValue(mockProducts);
             vi.mocked(mockReranker.rerank).mockRejectedValue(new Error('AI Failed'));
 
             const result = await service.searchByImage(Buffer.from(''), 'image/jpeg', 'key', 'req1');
 
-            expect(result.candidates).toHaveLength(2);
-            // Fallback order is original repo order
-            expect(result.candidates[0]._id?.toString()).toBe('507f1f77bcf86cd799439011');
-            expect(result.candidates[1]._id?.toString()).toBe('507f1f77bcf86cd799439012');
-        });
-    });
-
-    describe('extractSignals', () => {
-        it('should call vision extractor with correct params', async () => {
-            vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
-
-            const result = await service.extractSignals(Buffer.from('img'), 'image/png', 'key', 'req-id', 'prompt');
-
-            expect(result).toEqual(mockSignals);
-            expect(mockVision.extractSignals).toHaveBeenCalledWith({
-                imageBytes: Buffer.from('img'),
-                mimeType: 'image/png',
-                apiKey: 'key',
-                requestId: 'req-id',
-                prompt: 'prompt'
-            });
+            expect(result.results).toHaveLength(2);
+            // HeuristicScorer will score them, Sofa 1 comes first in repo
+            expect(result.results[0].title).toBe('Sofa 1');
+            expect(result.meta.notices).toContainEqual(expect.objectContaining({ code: 'RERANK_FAILED' }));
+            expect(mockTelemetry.record).toHaveBeenCalled();
         });
     });
 });

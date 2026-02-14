@@ -6,6 +6,7 @@ import { GeminiCatalogReranker } from '../../../infra/ai/gemini/gemini-reranker.
 import { CatalogRepository } from '../../../infra/repositories/catalog.repository';
 import { HeuristicScorer } from '../../../domain/ranking/heuristic-scorer';
 import { appConfigService } from '../../../config/app-config.service';
+import { telemetryService } from '../../../services/telemetry.service';
 
 export async function searchRoutes(server: FastifyInstance) {
     // Composition Root for Search (using manual DI for now)
@@ -13,7 +14,7 @@ export async function searchRoutes(server: FastifyInstance) {
     const vision = new GeminiVisionSignalExtractor();
     const reranker = new GeminiCatalogReranker();
     const heuristicScorer = new HeuristicScorer();
-    const service = new ImageSearchService(vision, repo, reranker, heuristicScorer, appConfigService, server.log);
+    const service = new ImageSearchService(vision, repo, reranker, heuristicScorer, appConfigService, telemetryService, server.log);
     const controller = new SearchController(service);
 
     server.post('/', (req, res) => controller.searchByImage(req, res));

@@ -13,6 +13,7 @@ const envSchema = z.object({
     STAGE1_TIMEOUT_MS: z.preprocess((val) => Number(val), z.number()).default(6000),
     STAGE2_TIMEOUT_MS: z.preprocess((val) => Number(val), z.number()).default(7000),
     TOTAL_TIMEOUT_MS: z.preprocess((val) => Number(val), z.number()).default(15000),
+    ADMIN_TOKEN: z.string().default('debug-secret'),
 });
 
 const _env = envSchema.safeParse(process.env);
