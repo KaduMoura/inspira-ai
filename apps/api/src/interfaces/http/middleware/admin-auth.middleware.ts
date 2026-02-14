@@ -7,15 +7,23 @@ import { env } from '../../../config/env';
  */
 export async function adminAuthMiddleware(request: FastifyRequest, reply: FastifyReply) {
     const adminToken = request.headers['x-admin-token'];
+    const expectedToken = env.ADMIN_TOKEN;
 
-    if (!adminToken || adminToken !== env.ADMIN_TOKEN) {
+    // Fastify headers can be string | string[]
+    const providedToken = Array.isArray(adminToken) ? adminToken[0] : adminToken;
+
+    if (!providedToken || providedToken !== expectedToken) {
         request.log.warn({
-            providedToken: adminToken ? '***' : 'missing',
+            providedToken: providedToken ? '***' : 'missing',
             requestId: request.id
         }, 'Unauthorized admin access attempt');
 
         return reply.code(403).send({
-            error: 'Forbidden: Valid admin token required',
+            data: null,
+            error: {
+                code: 'FORBIDDEN',
+                message: 'Forbidden: Valid admin token required'
+            },
             meta: { requestId: request.id }
         });
     }

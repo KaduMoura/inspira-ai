@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
 import { env } from './config/env';
 import { connectToDatabase, disconnectFromDatabase } from './infra/db';
 import { CatalogRepository } from './infra/repositories/catalog.repository';
@@ -41,6 +42,24 @@ async function bootstrap() {
             limits: {
                 fileSize: 10 * 1024 * 1024, // 10MB
             },
+        });
+
+        await server.register(rateLimit, {
+            max: 100,
+            timeWindow: '1 minute',
+            errorResponseBuilder: (request, context) => {
+                return {
+                    data: null,
+                    error: {
+                        code: 'RATE_LIMIT_EXCEEDED',
+                        message: `Too many requests. Please try again in ${context.after}.`,
+                        details: {
+                            retryAfter: context.after
+                        }
+                    },
+                    meta: { requestId: request.id }
+                };
+            }
         });
 
         // Error Handler
@@ -109,44 +128,6 @@ async function bootstrap() {
 
         await server.register(searchRoutes, { prefix: '/api/search' });
         await server.register(adminRoutes, { prefix: '/api/admin' });
-
-        // Debug Route (Temporary)
-        server.get('/debug/catalog', async () => {
-            const repo = new CatalogRepository();
-            const sample = await repo.getSample();
-            return {
-                database: 'connected',
-                sampleProduct: sample || 'No products found'
-            };
-        });
-
-        // Debug Pipeline (Temporary)
-        server.get('/debug/search-pipeline', async (request, reply) => {
-            const apiKey = request.headers['x-ai-api-key'] as string;
-            if (!apiKey) {
-                return reply.code(400).send({ error: 'Missing x-ai-api-key header' });
-            }
-
-            const repo = new CatalogRepository();
-            const vision = new GeminiVisionSignalExtractor();
-            const reranker = new GeminiCatalogReranker();
-            const heuristicScorer = new HeuristicScorer();
-            const service = new ImageSearchService(
-                vision,
-                repo,
-                reranker,
-                heuristicScorer,
-                appConfigService,
-                telemetryService,
-                server.log
-            );
-
-            return {
-                message: 'ImageSearchService initialized successfully.',
-                usage: 'This endpoint verifies that the Two-Stage AI Pipeline is correctly wired.',
-                ready: true
-            };
-        });
 
         const port = env.PORT;
         const host = '0.0.0.0';

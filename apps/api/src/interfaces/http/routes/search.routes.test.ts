@@ -107,18 +107,25 @@ describe('Search Routes Integration', () => {
 
     it('should return 200 on successful pipeline', async () => {
         const boundary = '----boundary';
-        const body = [
-            `--${boundary}`,
-            'Content-Disposition: form-data; name="image"; filename="t.jpg"',
-            'Content-Type: image/jpeg',
-            '',
-            'fake-image-bytes',
-            `--${boundary}`,
-            'Content-Disposition: form-data; name="prompt"',
-            '',
-            'some prompt',
-            `--${boundary}--`
-        ].join('\r\n');
+        const jpegMagicBytes = Buffer.from([0xFF, 0xD8, 0xFF, 0x00]);
+        const body = Buffer.concat([
+            Buffer.from([
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="image"; filename="t.jpg"',
+                'Content-Type: image/jpeg',
+                '',
+                ''
+            ].join('\r\n')),
+            jpegMagicBytes,
+            Buffer.from([
+                '',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="prompt"',
+                '',
+                'some prompt',
+                `--${boundary}--`
+            ].join('\r\n'))
+        ]);
 
         const mockResponse = {
             query: { signals: { categoryGuess: { value: 'test' } } },
@@ -148,5 +155,30 @@ describe('Search Routes Integration', () => {
         expect(payload.meta.timings.totalMs).toBe(100);
         expect(payload.meta.notices).toHaveLength(1);
         expect(mockSearchByImage).toHaveBeenCalled();
+    });
+
+    it('should return 400 for invalid magic bytes', async () => {
+        const boundary = '----boundary';
+        const body = [
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="image"; filename="t.jpg"',
+            'Content-Type: image/jpeg',
+            '',
+            'not-an-image-at-all',
+            `--${boundary}--`
+        ].join('\r\n');
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/',
+            headers: {
+                'x-ai-api-key': 'test-key',
+                'content-type': `multipart/form-data; boundary=${boundary}`
+            },
+            payload: body
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(JSON.parse(response.body).error.message).toContain('Magic bytes do not match');
     });
 });
