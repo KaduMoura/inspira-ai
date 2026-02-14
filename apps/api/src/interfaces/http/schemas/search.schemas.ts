@@ -6,6 +6,7 @@ export const SearchImageHeadersSchema = z.object({
 
 export const SearchImageBodySchema = z.object({
     prompt: z.string().max(1000, 'Prompt too long').optional(),
+    clientContext: z.record(z.string(), z.any()).optional(),
 });
 
 export const SearchImageResponseSchema = z.object({

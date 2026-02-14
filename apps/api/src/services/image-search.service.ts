@@ -22,6 +22,42 @@ export class ImageSearchService {
         private readonly logger?: Logger
     ) { }
 
+    private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, stageName: string): Promise<T> {
+        let timeoutHandle: any;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => reject(new Error(`${stageName} timed out after ${timeoutMs}ms`)), timeoutMs);
+        });
+
+        try {
+            return await Promise.race([promise, timeoutPromise]);
+        } finally {
+            clearTimeout(timeoutHandle);
+        }
+    }
+
+    private async withRetry<T>(
+        operation: () => Promise<T>,
+        maxRetries: number,
+        stageName: string
+    ): Promise<T> {
+        let lastError: any;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await operation();
+            } catch (error: any) {
+                lastError = error;
+                const isTransient = error.code === 'AI_RATE_LIMIT' || error.status >= 500 || error.code === 'AI_NETWORK_ERROR';
+
+                if (attempt < maxRetries && isTransient) {
+                    this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error:`, error.message);
+                    continue;
+                }
+                break;
+            }
+        }
+        throw lastError;
+    }
+
     /**
      * Complete Search Pipeline
      */
@@ -30,7 +66,8 @@ export class ImageSearchService {
         mimeType: string,
         apiKey: string,
         requestId: string,
-        userPrompt?: string
+        userPrompt?: string,
+        clientContext?: Record<string, any>
     ): Promise<SearchResponse> {
         const startTime = Date.now();
         const timings: SearchTimings = {
@@ -44,17 +81,31 @@ export class ImageSearchService {
 
         // 1. Extract Signals (Stage 1)
         const s1Start = Date.now();
-        const signals = await this.visionExtractor.extractSignals({
-            imageBytes,
-            mimeType,
-            prompt: userPrompt,
-            apiKey,
-            requestId,
-            config: {
-                temperature: 0.1,
-                maxOutputTokens: 1000
-            }
-        });
+        let signals: ImageSignals;
+        try {
+            signals = await this.withRetry(
+                () => this.withTimeout(
+                    this.visionExtractor.extractSignals({
+                        imageBytes,
+                        mimeType,
+                        prompt: userPrompt,
+                        apiKey,
+                        requestId,
+                        config: {
+                            temperature: 0.1,
+                            maxOutputTokens: 1000
+                        }
+                    }),
+                    config.timeoutsMs.stage1,
+                    'Stage 1 (Vision)'
+                ),
+                config.retries.stage1,
+                'Stage 1 (Vision)'
+            );
+        } catch (error) {
+            this.logger?.error(`[ImageSearchService] Stage 1 failed for request ${requestId} after retries:`, error);
+            throw error; // Initial signals are required
+        }
         timings.stage1Ms = Date.now() - s1Start;
 
         // Add notices for low confidence
@@ -122,8 +173,11 @@ export class ImageSearchService {
             this.heuristicScorer.score(c, signals, config)
         );
 
-        // Sort by heuristic score
-        scoredCandidates.sort((a, b) => b.score - a.score);
+        // Sort by heuristic score with stable fallback (ID)
+        scoredCandidates.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return a.id.localeCompare(b.id);
+        });
 
         let candidatesRerankedCount = 0;
 
@@ -135,17 +189,25 @@ export class ImageSearchService {
                 const topCandidates = scoredCandidates.slice(0, config.llmRerankTopM);
                 candidatesRerankedCount = topCandidates.length;
 
-                const rerankResult = await this.reranker.rerank({
-                    signals,
-                    candidates: topCandidates,
-                    prompt: userPrompt,
-                    apiKey,
-                    requestId,
-                    config: {
-                        temperature: 0.1,
-                        maxOutputTokens: 2000
-                    }
-                });
+                const rerankResult = await this.withRetry(
+                    () => this.withTimeout(
+                        this.reranker.rerank({
+                            signals,
+                            candidates: topCandidates,
+                            prompt: userPrompt,
+                            apiKey,
+                            requestId,
+                            config: {
+                                temperature: 0.1,
+                                maxOutputTokens: 2000
+                            }
+                        }),
+                        config.timeoutsMs.stage2,
+                        'Stage 2 (Rerank)'
+                    ),
+                    config.retries.stage2,
+                    'Stage 2 (Rerank)'
+                );
 
                 // Map and reorder
                 const candidateMap = new Map(scoredCandidates.map(c => [c.id, c]));
@@ -183,6 +245,7 @@ export class ImageSearchService {
             flags: {
                 rerankEnabled: config.enableLLMRerank,
                 hasPrompt: !!userPrompt,
+                hasClientContext: !!clientContext,
                 fallbackVision: signals.qualityFlags.lowConfidence || false
             }
         });

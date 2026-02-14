@@ -68,4 +68,20 @@ export class AdminController {
             }
         };
     }
+    /**
+     * Export all search telemetry as a JSON file
+     */
+    async exportTelemetry(request: FastifyRequest, reply: FastifyReply) {
+        const events = telemetryService.getEvents();
+        const filename = `telemetry-export-${new Date().toISOString().split('T')[0]}.json`;
+
+        return reply
+            .header('Content-Disposition', `attachment; filename="${filename}"`)
+            .header('Content-Type', 'application/json')
+            .send(JSON.stringify({
+                exportedAt: new Date().toISOString(),
+                count: events.length,
+                events
+            }, null, 2));
+    }
 }

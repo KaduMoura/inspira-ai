@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import sharp from 'sharp';
 import { ImageSearchService } from '../../../services/image-search.service';
 import { SearchImageHeadersSchema, SearchImageBodySchema } from '../schemas/search.schemas';
 
@@ -54,6 +55,7 @@ export class SearchController {
         let imageBuffer: Buffer | null = null;
         let mimeType = '';
         let userPrompt: string | undefined;
+        let clientContext: Record<string, any> | undefined;
 
         for await (const part of parts) {
             if (part.type === 'file' && part.fieldname === 'image') {
@@ -82,22 +84,50 @@ export class SearchController {
                 }
 
                 mimeType = part.mimetype;
-            } else if (part.type === 'field' && part.fieldname === 'prompt') {
-                const promptValue = part.value as string;
-                const bodyResult = SearchImageBodySchema.safeParse({ prompt: promptValue });
+            } else if (part.type === 'field' && (part.fieldname === 'prompt' || part.fieldname === 'clientContext')) {
+                const value = part.value as string;
 
-                if (!bodyResult.success) {
-                    return reply.code(400).send({
-                        data: null,
-                        error: {
-                            code: 'VALIDATION_ERROR',
-                            message: 'Invalid prompt',
-                            details: bodyResult.error.format()
-                        },
-                        meta
-                    });
+                if (part.fieldname === 'prompt') {
+                    const bodyResult = SearchImageBodySchema.safeParse({ prompt: value });
+                    if (!bodyResult.success) {
+                        return reply.code(400).send({
+                            data: null,
+                            error: {
+                                code: 'VALIDATION_ERROR',
+                                message: 'Invalid prompt',
+                                details: bodyResult.error.format()
+                            },
+                            meta
+                        });
+                    }
+                    userPrompt = bodyResult.data.prompt;
+                } else if (part.fieldname === 'clientContext') {
+                    try {
+                        const parsed = JSON.parse(value);
+                        const bodyResult = SearchImageBodySchema.safeParse({ clientContext: parsed });
+                        if (!bodyResult.success) {
+                            return reply.code(400).send({
+                                data: null,
+                                error: {
+                                    code: 'VALIDATION_ERROR',
+                                    message: 'Invalid clientContext',
+                                    details: bodyResult.error.format()
+                                },
+                                meta
+                            });
+                        }
+                        clientContext = bodyResult.data.clientContext;
+                    } catch (e) {
+                        return reply.code(400).send({
+                            data: null,
+                            error: {
+                                code: 'VALIDATION_ERROR',
+                                message: 'clientContext must be a valid JSON string'
+                            },
+                            meta
+                        });
+                    }
                 }
-                userPrompt = bodyResult.data.prompt;
             }
         }
 
@@ -112,13 +142,22 @@ export class SearchController {
             });
         }
 
+        // 2.5 Strip EXIF for privacy
+        try {
+            imageBuffer = await sharp(imageBuffer).rotate().toBuffer(); // .rotate() handles orientation then strips tags on toBuffer by default
+        } catch (error) {
+            request.log.warn({ requestId, error }, 'Failed to strip EXIF data from image');
+            // Continue with original buffer if sanitization fails
+        }
+
         // 3. Coordinate Service
         const searchResults = await this.imageSearchService.searchByImage(
             imageBuffer,
             mimeType,
             apiKey,
             requestId,
-            userPrompt
+            userPrompt,
+            clientContext
         );
 
         return reply.code(200).send({
