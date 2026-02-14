@@ -54,4 +54,88 @@ describe('Search Routes Integration', () => {
         expect(response.statusCode).toBe(400);
         expect(JSON.parse(response.body).error).toContain('Expected multipart');
     });
+
+    it('should return 400 for invalid mimetype', async () => {
+        const boundary = '----boundary';
+        const body = [
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="image"; filename="test.txt"',
+            'Content-Type: text/plain',
+            '',
+            'fake content',
+            `--${boundary}--`
+        ].join('\r\n');
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/image',
+            headers: {
+                'x-ai-api-key': 'test-key',
+                'content-type': `multipart/form-data; boundary=${boundary}`
+            },
+            payload: body
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(JSON.parse(response.body).error).toContain('Invalid file type');
+    });
+
+    it('should return 400 for too long prompt', async () => {
+        const boundary = '----boundary';
+        const longPrompt = 'a'.repeat(1001);
+        const body = [
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="prompt"',
+            '',
+            longPrompt,
+            `--${boundary}--`
+        ].join('\r\n');
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/image',
+            headers: {
+                'x-ai-api-key': 'test-key',
+                'content-type': `multipart/form-data; boundary=${boundary}`
+            },
+            payload: body
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(JSON.parse(response.body).error).toContain('Prompt too long');
+    });
+
+    it('should return 200 on successful pipeline', async () => {
+        const boundary = '----boundary';
+        const body = [
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="image"; filename="t.jpg"',
+            'Content-Type: image/jpeg',
+            '',
+            'fake-image-bytes',
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="prompt"',
+            '',
+            'some prompt',
+            `--${boundary}--`
+        ].join('\r\n');
+
+        mockSearchByImage.mockResolvedValueOnce({
+            signals: { categoryGuess: { value: 'test' } },
+            candidates: []
+        });
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/image',
+            headers: {
+                'x-ai-api-key': 'test-key',
+                'content-type': `multipart/form-data; boundary=${boundary}`
+            },
+            payload: body
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(mockSearchByImage).toHaveBeenCalled();
+    });
 });

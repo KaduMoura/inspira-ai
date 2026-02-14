@@ -10,6 +10,7 @@ import { GeminiVisionSignalExtractor } from './infra/ai/gemini/gemini-vision.ser
 import { GeminiCatalogReranker } from './infra/ai/gemini/gemini-reranker.service';
 import { AiError, AiErrorCode } from './domain/ai/schemas';
 import { searchRoutes } from './interfaces/http/routes/search.routes';
+import { adminRoutes } from './interfaces/http/routes/admin.routes';
 
 const server = Fastify({
     logger: env.NODE_ENV === 'production' ? true : {
@@ -41,6 +42,9 @@ async function bootstrap() {
 
         // Error Handler
         server.setErrorHandler((error, request, reply) => {
+            // Log full error details
+            request.log.error(error);
+
             if (error instanceof AiError) {
                 const statusMap: Record<AiErrorCode, number> = {
                     [AiErrorCode.AI_AUTH_ERROR]: 401,
@@ -56,11 +60,26 @@ async function bootstrap() {
                 return reply.code(status).send({
                     error: error.message,
                     code: error.code,
+                    requestId: request.id
                 });
             }
 
-            // Default handler
-            reply.send(error);
+            // Handle validation errors (Fastify standard)
+            if (error.validation) {
+                return reply.code(400).send({
+                    error: 'Validation failed',
+                    details: error.validation,
+                    requestId: request.id
+                });
+            }
+
+            // Default sanitized handler for internal errors
+            const isProd = env.NODE_ENV === 'production';
+            reply.code(error.statusCode || 500).send({
+                error: isProd ? 'Internal Server Error' : error.message,
+                requestId: request.id,
+                ...(isProd ? {} : { stack: error.stack })
+            });
         });
 
         // Routes
@@ -69,6 +88,7 @@ async function bootstrap() {
         });
 
         await server.register(searchRoutes, { prefix: '/api/search' });
+        await server.register(adminRoutes, { prefix: '/api/admin' });
 
         // Debug Route (Temporary)
         server.get('/debug/catalog', async () => {

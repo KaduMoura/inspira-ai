@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImageSearchService } from './image-search.service';
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
-import { ImageSignals, RerankResult } from '../domain/ai/schemas';
+import { ImageSignals } from '../domain/ai/schemas';
 import { Product } from '../domain/product';
+import { ObjectId } from 'mongodb';
 
 describe('ImageSearchService', () => {
     let service: ImageSearchService;
@@ -20,8 +21,8 @@ describe('ImageSearchService', () => {
     };
 
     const mockProducts: Product[] = [
-        { _id: '1' as any, title: 'Sofa 1', description: 'desc 1', category: 'furniture', type: 'sofa', price: 100, width: 1, height: 1, depth: 1 },
-        { _id: '2' as any, title: 'Sofa 2', description: 'desc 2', category: 'furniture', type: 'sofa', price: 200, width: 1, height: 1, depth: 1 },
+        { _id: new ObjectId('507f1f77bcf86cd799439011'), title: 'Sofa 1', description: 'desc 1', category: 'furniture', type: 'sofa', price: 100, width: 1, height: 1, depth: 1 },
+        { _id: new ObjectId('507f1f77bcf86cd799439012'), title: 'Sofa 2', description: 'desc 2', category: 'furniture', type: 'sofa', price: 200, width: 1, height: 1, depth: 1 },
     ];
 
     beforeEach(() => {
@@ -32,7 +33,7 @@ describe('ImageSearchService', () => {
             findCandidates: vi.fn(),
             findById: vi.fn(),
             getSample: vi.fn(),
-            collection: {} as any
+            collection: {} as unknown
         } as unknown as CatalogRepository;
         mockReranker = {
             rerank: vi.fn()
@@ -46,16 +47,16 @@ describe('ImageSearchService', () => {
             vi.mocked(mockVision.extractSignals).mockResolvedValue(mockSignals);
             vi.mocked(mockRepo.findCandidates).mockResolvedValue(mockProducts);
             vi.mocked(mockReranker.rerank).mockResolvedValue({
-                rankedIds: ['2', '1'],
-                reasons: { '2': ['better match'] }
+                rankedIds: ['507f1f77bcf86cd799439012', '507f1f77bcf86cd799439011'],
+                reasons: { '507f1f77bcf86cd799439012': ['better match'] }
             });
 
             const result = await service.searchByImage(Buffer.from(''), 'image/jpeg', 'key', 'req1');
 
             expect(result.signals).toEqual(mockSignals);
             expect(result.candidates).toHaveLength(2);
-            expect(result.candidates[0]._id).toBe('2');
-            expect(result.candidates[1]._id).toBe('1');
+            expect(result.candidates[0]._id?.toString()).toBe('507f1f77bcf86cd799439012');
+            expect(result.candidates[1]._id?.toString()).toBe('507f1f77bcf86cd799439011');
         });
 
         it('should return empty candidates if repository finds nothing', async () => {
@@ -77,8 +78,8 @@ describe('ImageSearchService', () => {
 
             expect(result.candidates).toHaveLength(2);
             // Fallback order is original repo order
-            expect(result.candidates[0]._id).toBe('1');
-            expect(result.candidates[1]._id).toBe('2');
+            expect(result.candidates[0]._id?.toString()).toBe('507f1f77bcf86cd799439011');
+            expect(result.candidates[1]._id?.toString()).toBe('507f1f77bcf86cd799439012');
         });
     });
 
