@@ -26,6 +26,7 @@ export interface CatalogRerankerInput {
     requestId: string;
     apiKey: string;
     config?: AiConfig;
+    weights?: any;
 }
 
 export interface CatalogReranker {

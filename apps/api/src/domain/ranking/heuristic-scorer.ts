@@ -14,6 +14,8 @@ export class HeuristicScorer {
         totalScore += textScore * config.weights.text;
         if (textScore > 0.6) reasons.push('Keyword match');
 
+        console.log(`[HeuristicScorer] Candidate: ${candidate.title} | TextScore: ${textScore.toFixed(3)} (w: ${config.weights.text})`);
+
         // 2. Category Match
         const categoryMatch = candidate.category.toLowerCase() === signals.categoryGuess.value.toLowerCase();
         const categoryScore = categoryMatch ? 1 : 0;
@@ -30,6 +32,8 @@ export class HeuristicScorer {
         const attributeScore = this.calculateAttributeMatch(candidate, signals);
         totalScore += attributeScore * config.weights.attributes;
         if (attributeScore > 0.5) reasons.push('Visual attributes match');
+
+        console.log(`[HeuristicScorer] Candidate: ${candidate.title} | AttrScore: ${attributeScore.toFixed(3)} (w: ${config.weights.attributes}) | Total: ${totalScore.toFixed(3)}`);
 
         // 5. Price Proximity (if requested in intent)
         if (signals.intent?.priceMax || signals.intent?.priceMin) {
@@ -65,30 +69,37 @@ export class HeuristicScorer {
         if (!keywords.length) return 0;
 
         const content = `${candidate.title} ${candidate.description}`.toLowerCase();
-        let matches = 0;
+        const contentTokens = content.split(/[\s,.-]+/).filter(t => t.length > 2);
 
-        for (const kw of keywords) {
-            if (content.includes(kw.toLowerCase())) {
+        let matches = 0;
+        const queryTokens = keywords.flatMap(kw => kw.toLowerCase().split(/[\s,.-]+/)).filter(t => t.length > 2);
+
+        if (queryTokens.length === 0) return 0;
+
+        for (const qToken of queryTokens) {
+            if (contentTokens.some(cToken => cToken.includes(qToken) || qToken.includes(cToken))) {
                 matches++;
             }
         }
 
-        return matches / keywords.length;
+        return matches / queryTokens.length;
     }
 
     private calculateAttributeMatch(candidate: CandidateSummary, signals: ImageSignals): number {
         const content = `${candidate.title} ${candidate.description}`.toLowerCase();
+        const contentTokens = content.split(/[\s,.-]+/).filter(t => t.length > 2);
+
         const attributes = [
             ...signals.attributes.style,
             ...signals.attributes.material,
             ...signals.attributes.color
-        ];
+        ].flatMap(attr => attr.toLowerCase().split(/[\s,.-]+/)).filter(t => t.length > 2);
 
         if (!attributes.length) return 0;
 
         let matches = 0;
-        for (const attr of attributes) {
-            if (content.includes(attr.toLowerCase())) {
+        for (const attrToken of attributes) {
+            if (contentTokens.some(cToken => cToken.includes(attrToken) || attrToken.includes(cToken))) {
                 matches++;
             }
         }

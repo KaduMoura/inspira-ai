@@ -146,8 +146,8 @@ export class ImageSearchService {
         // Initial Retrieval (Heuristic Plans)
         const mongoStart = Date.now();
 
-        // Confidence-driven retrieval: use Plan D if confidence is too low
-        const useStrictFilters = signals.categoryGuess.confidence >= config.minCategoryConfidence;
+        // Confidence-driven retrieval: use Plan D if confidence is too low OR if strict filter is disabled
+        const useStrictFilters = config.useCategoryFilter && signals.categoryGuess.confidence >= config.minCategoryConfidence;
 
         const { products: initialCandidates, plan: retrievalPlan } = await this.catalogRepository.findCandidates({
             category: useStrictFilters ? signals.categoryGuess.value : undefined,
@@ -226,6 +226,7 @@ export class ImageSearchService {
                             prompt: userPrompt,
                             apiKey,
                             requestId,
+                            weights: config.weights,
                             config: {
                                 temperature: 0.1,
                                 maxOutputTokens: 2000

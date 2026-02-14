@@ -5,12 +5,14 @@ Your goal is to rank a list of candidate furniture products based on their relev
 Inputs:
 - Image Signals: Structured data extracted from an image the user is interested in.
 - Optional User Prompt: Additional context or specific requests from the user.
+- Ranking Weights (Optional): Weights from the Admin Panel indicating the importance of specific criteria (0 to 1).
 - Candidate List: A list of products from our catalog, each with an ID, title, category, type, price, and description.
 
 Task:
 1. Compare each candidate product against the image signals (category, style, material, color, keywords).
-2. Rank the candidates from most relevant to least relevant.
-3. Provide a brief reason for the top matches (e.g., "Perfect style match", "Matches both color and material").
+2. Prioritize candidates according to the provided Ranking Weights. For example, if 'price' weight is high and 'text' is low, prioritize price proximity over keyword matches.
+3. Rank the candidates from most relevant to least relevant.
+4. Provide a brief reason for the top matches (e.g., "Perfect style match", "Matches both color and material").
 
 Constraints:
 - You MUST only use the product IDs provided in the candidate list.
@@ -25,14 +27,23 @@ Constraints:
 - Return ONLY the JSON. No prose or markdown.
 `;
 
-export function buildRerankUserPrompt(signals: any, candidates: any[], userPrompt?: string): string {
-  return `
+export function buildRerankUserPrompt(signals: any, candidates: any[], userPrompt?: string, weights?: any): string {
+  let prompt = `
 --- IMAGE SIGNALS ---
 ${JSON.stringify(signals, null, 2)}
 
 --- USER INTENT ---
 ${userPrompt || "Find products similar to the image."}
+`;
 
+  if (weights) {
+    prompt += `
+--- RANKING WEIGHTS (ADMIN) ---
+${JSON.stringify(weights, null, 2)}
+`;
+  }
+
+  prompt += `
 --- CANDIDATES ---
 ${JSON.stringify(candidates.map(c => ({
     id: c.id,
@@ -43,4 +54,6 @@ ${JSON.stringify(candidates.map(c => ({
     desc: c.description.substring(0, 200)
   })), null, 2)}
 `;
+
+  return prompt;
 }

@@ -32,7 +32,7 @@ const RERANK_RESPONSE_SCHEMA: Schema = {
 
 export class GeminiCatalogReranker implements CatalogReranker {
     async rerank(input: CatalogRerankerInput): Promise<RerankResult> {
-        const { signals, candidates, prompt, apiKey, config, requestId } = input;
+        const { signals, candidates, prompt, apiKey, config, requestId, weights } = input;
 
         if (candidates.length === 0) {
             return { rankedIds: [], reasons: {} };
@@ -51,7 +51,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
             responseSchema: RERANK_RESPONSE_SCHEMA,
         };
 
-        const userPrompt = buildRerankUserPrompt(signals, candidates, prompt);
+        const userPrompt = buildRerankUserPrompt(signals, candidates, prompt, weights);
         const modelName = env.GEMINI_MODEL_RERANK;
 
         console.log(`[LLM Reranker] MODEL: ${modelName}`);
