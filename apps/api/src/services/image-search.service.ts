@@ -24,8 +24,9 @@ export class ImageSearchService {
     ) { }
 
     private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, stageName: string): Promise<T> {
-        let timeoutHandle: any;
+        let timeoutHandle = setTimeout(() => { }, 0); // Initialize with dummy timeout
         const timeoutPromise = new Promise<never>((_, reject) => {
+            clearTimeout(timeoutHandle); // Clear dummy immediately
             timeoutHandle = setTimeout(() => reject(new Error(`${stageName} timed out after ${timeoutMs} ms`)), timeoutMs);
         });
 
@@ -41,16 +42,17 @@ export class ImageSearchService {
         maxRetries: number,
         stageName: string
     ): Promise<T> {
-        let lastError: any;
+        let lastError: unknown;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 return await operation();
-            } catch (error: any) {
+            } catch (error) {
                 lastError = error;
-                const isTransient = error.code === 'AI_RATE_LIMIT' || error.status >= 500 || error.code === 'AI_NETWORK_ERROR';
+                const err = error as { code?: string; status?: number; message?: string };
+                const isTransient = err.code === 'AI_RATE_LIMIT' || (err.status && err.status >= 500) || err.code === 'AI_NETWORK_ERROR';
 
                 if (attempt < maxRetries && isTransient) {
-                    this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error: `, error.message);
+                    this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error: `, err.message);
                     continue;
                 }
                 break;
@@ -68,7 +70,7 @@ export class ImageSearchService {
         apiKey: string,
         requestId: string,
         userPrompt?: string,
-        clientContext?: Record<string, any>
+        clientContext?: Record<string, unknown>
     ): Promise<SearchResponse> {
         const startTime = Date.now();
         const timings: SearchTimings = {

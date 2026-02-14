@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { ImageSearchService } from '../services/image-search.service';
 import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
 import { AppConfigService } from '../config/app-config.service';
@@ -9,9 +9,9 @@ import { CatalogRepository } from '../infra/repositories/catalog.repository';
 
 describe('Search Pipeline Logic', () => {
     let service: ImageSearchService;
-    let mockVision: any;
-    let mockRepo: any;
-    let mockReranker: any;
+    let mockVision: { extractSignals: Mock };
+    let mockRepo: { findCandidates: Mock };
+    let mockReranker: { rerank: Mock };
     let mockScorer: HeuristicScorer;
     let mockConfig: AppConfigService;
     let mockTelemetry: TelemetryService;
@@ -47,16 +47,16 @@ describe('Search Pipeline Logic', () => {
 
         mockScorer = new HeuristicScorer();
         mockConfig = AppConfigService.getInstance();
-        mockTelemetry = { record: vi.fn(), getEvents: vi.fn().mockReturnValue([]) } as any;
+        mockTelemetry = { record: vi.fn(), getEvents: vi.fn().mockReturnValue([]) } as unknown as TelemetryService;
 
         service = new ImageSearchService(
-            mockVision as VisionSignalExtractor,
-            mockRepo as CatalogRepository,
-            mockReranker as CatalogReranker,
+            mockVision as unknown as VisionSignalExtractor,
+            mockRepo as unknown as CatalogRepository,
+            mockReranker as unknown as CatalogReranker,
             mockScorer,
             mockConfig,
             mockTelemetry,
-            { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any
+            { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
         );
     });
 
