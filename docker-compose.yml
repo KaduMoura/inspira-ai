@@ -1,13 +1,26 @@
 services:
-  api:
+  init:
     image: node:24.13
     working_dir: /app
     volumes:
       - .:/app
-    command: sh -c "corepack enable && pnpm install && pnpm --filter api dev"
+    command: sh -c "corepack enable && pnpm install --no-frozen-lockfile"
+    environment:
+      - CI=true
+
+  api:
+    image: node:24.13
+    working_dir: /app
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    command: sh -c "corepack enable && pnpm --filter api dev"
     ports:
       - "4000:4000"
     environment:
+      - CI=true
       - PORT=4000
       - NODE_ENV=development
       - MONGO_URI=${MONGO_URI}
@@ -16,10 +29,14 @@ services:
   web:
     image: node:24.13
     working_dir: /app
+    depends_on:
+      init:
+        condition: service_completed_successfully
     volumes:
       - .:/app
-    command: sh -c "corepack enable && pnpm install && pnpm --filter web dev"
+    command: sh -c "corepack enable && pnpm --filter web dev"
     ports:
       - "3000:3000"
     environment:
+      - CI=true
       - NODE_ENV=development
