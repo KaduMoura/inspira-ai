@@ -8,6 +8,8 @@ import { ImageSearchService } from './services/image-search.service';
 
 import { GeminiVisionSignalExtractor } from './infra/ai/gemini/gemini-vision.service';
 import { GeminiCatalogReranker } from './infra/ai/gemini/gemini-reranker.service';
+import { AiError, AiErrorCode } from './domain/ai/schemas';
+import { searchRoutes } from './interfaces/http/routes/search.routes';
 
 const server = Fastify({
     logger: env.NODE_ENV === 'production' ? true : {
@@ -37,10 +39,36 @@ async function bootstrap() {
             },
         });
 
+        // Error Handler
+        server.setErrorHandler((error, request, reply) => {
+            if (error instanceof AiError) {
+                const statusMap: Record<AiErrorCode, number> = {
+                    [AiErrorCode.AI_AUTH_ERROR]: 401,
+                    [AiErrorCode.AI_RATE_LIMIT]: 429,
+                    [AiErrorCode.AI_TIMEOUT]: 408,
+                    [AiErrorCode.AI_INVALID_OUTPUT]: 502,
+                    [AiErrorCode.AI_NETWORK_ERROR]: 503,
+                    [AiErrorCode.AI_INTERNAL_ERROR]: 500,
+                    [AiErrorCode.AI_CONTEXT_TOO_LARGE]: 413,
+                };
+
+                const status = statusMap[error.code] || 500;
+                return reply.code(status).send({
+                    error: error.message,
+                    code: error.code,
+                });
+            }
+
+            // Default handler
+            reply.send(error);
+        });
+
         // Routes
         server.get('/health', async () => {
             return { status: 'OK', timestamp: new Date().toISOString() };
         });
+
+        await server.register(searchRoutes, { prefix: '/api/search' });
 
         // Debug Route (Temporary)
         server.get('/debug/catalog', async () => {

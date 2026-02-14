@@ -1,0 +1,55 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { ImageSearchService } from '../../../services/image-search.service';
+import { SearchImageHeadersSchema } from '../schemas/search.schemas';
+
+export class SearchController {
+    constructor(private readonly imageSearchService: ImageSearchService) { }
+
+    async searchByImage(request: FastifyRequest, reply: FastifyReply) {
+        // 1. Validate Headers
+        const headerResult = SearchImageHeadersSchema.safeParse(request.headers);
+        if (!headerResult.success) {
+            return reply.code(400).send({
+                error: 'Validation failed',
+                details: headerResult.error.format()
+            });
+        }
+
+        const apiKey = headerResult.data['x-ai-api-key'];
+        const requestId = (request.headers['x-request-id'] as string) || `req_${Date.now()}`;
+
+        // 2. Parse Multipart
+        if (!request.isMultipart()) {
+            return reply.code(400).send({ error: 'Expected multipart/form-data' });
+        }
+
+        const parts = request.parts();
+        let imageBuffer: Buffer | null = null;
+        let mimeType = '';
+        let userPrompt: string | undefined;
+
+        for await (const part of parts) {
+            if (part.type === 'file' && part.fieldname === 'image') {
+                imageBuffer = await part.toBuffer();
+                mimeType = part.mimetype;
+            } else if (part.type === 'field' && part.fieldname === 'prompt') {
+                userPrompt = part.value as string;
+            }
+        }
+
+        if (!imageBuffer) {
+            return reply.code(400).send({ error: 'Missing image file in multipart body' });
+        }
+
+        // 3. Coordinate Service
+        const results = await this.imageSearchService.searchByImage(
+            imageBuffer,
+            mimeType,
+            apiKey,
+            requestId,
+            userPrompt
+        );
+
+        return reply.code(200).send(results);
+    }
+}
