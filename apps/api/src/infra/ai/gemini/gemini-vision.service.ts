@@ -50,7 +50,7 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
 
                 if (!validated.success) {
                     throw new AiError(
-                        AiErrorCode.AI_INVALID_OUTPUT,
+                        AiErrorCode.PROVIDER_INVALID_RESPONSE,
                         'Failed to validate AI output schema',
                         validated.error.format()
                     );
@@ -61,7 +61,7 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
                 if (parseError instanceof AiError) throw parseError;
 
                 throw new AiError(
-                    AiErrorCode.AI_INVALID_OUTPUT,
+                    AiErrorCode.PROVIDER_INVALID_RESPONSE,
                     'Failed to parse AI response as JSON',
                     responseText
                 );
@@ -74,13 +74,13 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
             const message = error?.message || 'Unknown AI error';
 
             if (status === 401 || status === 403) {
-                throw new AiError(AiErrorCode.AI_AUTH_ERROR, 'Invalid API Key', error);
+                throw new AiError(AiErrorCode.PROVIDER_AUTH_ERROR, 'Invalid API Key', error);
             }
             if (status === 429) {
-                throw new AiError(AiErrorCode.AI_RATE_LIMIT, 'Quota exceeded', error);
+                throw new AiError(AiErrorCode.PROVIDER_RATE_LIMIT, 'Quota exceeded', error);
             }
 
-            throw new AiError(AiErrorCode.AI_INTERNAL_ERROR, message, error);
+            throw new AiError(AiErrorCode.INTERNAL_ERROR, message, error);
         }
     }
 }

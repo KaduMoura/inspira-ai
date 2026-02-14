@@ -79,13 +79,13 @@ export class GeminiCatalogReranker implements CatalogReranker {
             const message = error?.message || 'Unknown Rerank error';
 
             if (status === 401 || status === 403) {
-                throw new AiError(AiErrorCode.AI_AUTH_ERROR, 'Invalid API Key', error);
+                throw new AiError(AiErrorCode.PROVIDER_AUTH_ERROR, 'Invalid API Key', error);
             }
             if (status === 429) {
-                throw new AiError(AiErrorCode.AI_RATE_LIMIT, 'Quota exceeded', error);
+                throw new AiError(AiErrorCode.PROVIDER_RATE_LIMIT, 'Quota exceeded', error);
             }
 
-            throw new AiError(AiErrorCode.AI_INTERNAL_ERROR, message, error);
+            throw new AiError(AiErrorCode.INTERNAL_ERROR, message, error);
         }
     }
 
@@ -98,7 +98,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
 
             if (!validated.success) {
                 throw new AiError(
-                    AiErrorCode.AI_INVALID_OUTPUT,
+                    AiErrorCode.PROVIDER_INVALID_RESPONSE,
                     'Failed to validate Rerank output schema',
                     validated.error.format()
                 );
@@ -108,7 +108,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
         } catch (e: any) {
             if (e instanceof AiError) throw e;
             throw new AiError(
-                AiErrorCode.AI_INVALID_OUTPUT,
+                AiErrorCode.PROVIDER_INVALID_RESPONSE,
                 'Failed to parse Rerank response as JSON',
                 text
             );
