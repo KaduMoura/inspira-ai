@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { Upload, X, ImageIcon, FileWarning, Image as LucideImageIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface UploadPanelProps {
@@ -70,18 +71,25 @@ export function UploadPanel({
 
     return (
         <div className={cn("w-full", className)}>
-            <div
+            <motion.div
                 onClick={() => inputRef.current?.click()}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
                 className={cn(
                     "relative aspect-[2/1] rounded-[2rem] border-[1.5px] border-dashed transition-all duration-300 cursor-pointer group overflow-hidden flex flex-col items-center justify-center p-8",
                     previewUrl
                         ? "border-primary/40 bg-primary/5"
-                        : "border-slate-200 hover:border-[#1A73E8]/50 bg-slate-50/50 hover:bg-[#1A73E8]/5 hover:shadow-lg hover:shadow-[#1A73E8]/10 hover:-translate-y-0.5",
+                        : "border-slate-200 hover:border-purple-500 hover:border-solid bg-slate-50/50 hover:shadow-xl hover:shadow-purple-500/10",
                     externalError && "border-destructive/50 bg-destructive/5"
                 )}
             >
+                {/* Purple Overlay on Hover */}
+                {!previewUrl && (
+                    <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                )}
+
                 <input
                     ref={inputRef}
                     type="file"
@@ -109,21 +117,21 @@ export function UploadPanel({
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center space-y-4 text-center animate-fade-in">
-                        <div className="w-20 h-20 flex items-center justify-center text-[#8AB4F8] group-hover:scale-110 transition-transform duration-500 ease-out">
+                    <div className="flex flex-col items-center justify-center space-y-4 text-center animate-fade-in relative z-10">
+                        <div className="w-20 h-20 flex items-center justify-center text-slate-300 group-hover:text-purple-400 group-hover:scale-110 transition-all duration-500 ease-out">
                             <LucideImageIcon className="w-16 h-16 stroke-[1.5]" />
                         </div>
                         <div className="space-y-2">
-                            <p className="text-[#3C4043] text-lg font-medium group-hover:text-[#1A73E8] transition-colors">
+                            <p className="text-[#3C4043] text-lg font-medium group-hover:text-purple-600 transition-colors">
                                 Upload an image of a furniture item
                             </p>
-                            <p className="text-[#70757A] text-sm">
-                                Drag & drop or <span className="text-[#1A73E8] font-medium hover:underline">browse</span> to upload
+                            <p className="text-[#70757A] text-sm group-hover:text-purple-400/80 transition-colors">
+                                Drag & drop or <span className="text-[#1A73E8] group-hover:text-purple-600 font-medium hover:underline">browse</span> to upload
                             </p>
                         </div>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {externalError && (
                 <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm animate-shake">
