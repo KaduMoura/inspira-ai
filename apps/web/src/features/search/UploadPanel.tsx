@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Upload, X, ImageIcon, FileWarning, Image as LucideImageIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,8 @@ export function UploadPanel({
 }: UploadPanelProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const [isDragging, setIsDragging] = useState(false);
+
     const handleFile = useCallback((selectedFile: File) => {
         if (!ALLOWED_TYPES.includes(selectedFile.type)) {
             onFileChange(null);
@@ -41,20 +43,36 @@ export function UploadPanel({
         onFileChange(selectedFile);
     }, [onFileChange]);
 
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = "copy";
+        }
+    }, []);
+
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsDragging(false);
 
         const droppedFile = e.dataTransfer.files?.[0];
         if (droppedFile) {
             handleFile(droppedFile);
         }
     }, [handleFile]);
-
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    }, []);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -75,6 +93,8 @@ export function UploadPanel({
                 onClick={() => inputRef.current?.click()}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 className={cn(
@@ -82,12 +102,16 @@ export function UploadPanel({
                     previewUrl
                         ? "border-primary/40 bg-primary/5"
                         : "border-slate-200 hover:border-purple-500 hover:border-solid bg-slate-50/50 hover:shadow-xl hover:shadow-purple-500/10",
+                    isDragging && "border-purple-500 border-solid bg-purple-500/5 shadow-xl shadow-purple-500/10",
                     externalError && "border-destructive/50 bg-destructive/5"
                 )}
             >
-                {/* Purple Overlay on Hover */}
+                {/* Purple Overlay on Hover/Drag */}
                 {!previewUrl && (
-                    <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                    <div className={cn(
+                        "absolute inset-0 bg-purple-500/10 transition-opacity duration-300 pointer-events-none",
+                        isDragging ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )} />
                 )}
 
                 <input

@@ -94,7 +94,7 @@ async function bootstrap() {
                 const statusMap: Record<AiErrorCode, number> = {
                     [AiErrorCode.PROVIDER_AUTH_ERROR]: 401,
                     [AiErrorCode.PROVIDER_RATE_LIMIT]: 429,
-                    [AiErrorCode.PROVIDER_TIMEOUT]: 408,
+                    [AiErrorCode.PROVIDER_TIMEOUT]: 504, // Gateway Timeout is more appropriate for backend timeouts
                     [AiErrorCode.PROVIDER_INVALID_RESPONSE]: 502,
                     [AiErrorCode.PROVIDER_NETWORK_ERROR]: 503,
                     [AiErrorCode.INTERNAL_ERROR]: 500,

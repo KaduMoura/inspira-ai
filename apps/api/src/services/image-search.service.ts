@@ -1,6 +1,5 @@
-
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
-import { ImageSignals, CandidateSummary, SearchResponse, ScoredCandidate, SearchTimings, SearchNotice, AiErrorCode } from '../domain/ai/schemas';
+import { ImageSignals, CandidateSummary, SearchResponse, ScoredCandidate, SearchTimings, SearchNotice, AiError, AiErrorCode } from '../domain/ai/schemas';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
 import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
 import { AppConfigService } from '../config/app-config.service';
@@ -24,16 +23,20 @@ export class ImageSearchService {
     ) { }
 
     private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, stageName: string): Promise<T> {
-        let timeoutHandle = setTimeout(() => { }, 0); // Initialize with dummy timeout
+        let timeoutHandle: NodeJS.Timeout | null = null;
         const timeoutPromise = new Promise<never>((_, reject) => {
-            clearTimeout(timeoutHandle); // Clear dummy immediately
-            timeoutHandle = setTimeout(() => reject(new Error(`${stageName} timed out after ${timeoutMs} ms`)), timeoutMs);
+            timeoutHandle = setTimeout(() => {
+                reject(new AiError(
+                    AiErrorCode.PROVIDER_TIMEOUT,
+                    `${stageName} timed out after ${timeoutMs} ms`
+                ));
+            }, timeoutMs);
         });
 
         try {
             return await Promise.race([promise, timeoutPromise]);
         } finally {
-            clearTimeout(timeoutHandle);
+            if (timeoutHandle) clearTimeout(timeoutHandle);
         }
     }
 

@@ -11,11 +11,19 @@ services:
       - NODE_ENV=production
       - MONGO_URI=${MONGO_URI}
       - CORS_ORIGIN=http://localhost:3000
+      - STAGE1_TIMEOUT_MS=${STAGE1_TIMEOUT_MS:-30000}
+      - STAGE2_TIMEOUT_MS=${STAGE2_TIMEOUT_MS:-30000}
+      - TOTAL_TIMEOUT_MS=${TOTAL_TIMEOUT_MS:-120000}
+      - AI_RETRY_MAX=${AI_RETRY_MAX:-4}
+    env_file:
+      - .env
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
     ports:
       - "3000:3000"
     environment:
