@@ -1,5 +1,6 @@
-import { BadgeCheck, ThumbsUp, ThumbsDown, Package } from "lucide-react";
+import { BadgeCheck, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { ScoredCandidate, MatchBand } from "@/types/domain";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/apiClient";
@@ -38,14 +39,20 @@ export function ResultCard({ result, rank, requestId, className }: ResultCardPro
     };
 
     return (
-        <div className={cn(
-            "group relative bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 animate-slide-up",
-            className
-        )}>
+        <motion.div
+            whileHover={{ y: -8, transition: { type: "spring", stiffness: 400, damping: 25 } }}
+            className={cn(
+                "group relative bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-shadow duration-500",
+                className
+            )}
+        >
             {/* Rank Badge */}
-            <div className="absolute top-6 left-6 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
+            <motion.div
+                whileHover={{ rotate: [0, -10, 10, 0] }}
+                className="absolute top-6 left-6 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm"
+            >
                 {rank}
-            </div>
+            </motion.div>
 
             <div className="flex justify-between items-start gap-4 mb-6 pl-10">
                 <div className="space-y-1">
@@ -56,12 +63,16 @@ export function ResultCard({ result, rank, requestId, className }: ResultCardPro
                         {result.category} <span className="w-1 h-1 rounded-full bg-slate-200" /> {result.type}
                     </div>
                 </div>
-                <div className={cn(
-                    "px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider shrink-0",
-                    bandColors[result.matchBand]
-                )}>
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className={cn(
+                        "px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider shrink-0 shadow-sm",
+                        bandColors[result.matchBand]
+                    )}
+                >
                     {result.matchBand} Match
-                </div>
+                </motion.div>
             </div>
 
             <div className="space-y-6">
@@ -91,27 +102,35 @@ export function ResultCard({ result, rank, requestId, className }: ResultCardPro
                 <div className="flex items-center justify-between pt-4">
                     <div className="flex flex-wrap gap-2 flex-1">
                         {result.reasons.slice(0, 2).map((reason, i) => (
-                            <div key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50/50 text-[10px] font-bold text-indigo-400 border border-indigo-100/30">
+                            <motion.div
+                                key={i}
+                                whileHover={{ scale: 1.05, backgroundColor: "#eef2ff" }}
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50/50 text-[10px] font-bold text-indigo-400 border border-indigo-100/30 cursor-default"
+                            >
                                 <BadgeCheck className="w-3.5 h-3.5" />
                                 {reason}
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0 bg-slate-50 rounded-xl p-1 translate-x-1">
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={() => handleFeedback('thumbs_up')}
                             disabled={isSubmitting}
                             className={cn(
                                 "p-2 rounded-lg transition-all",
                                 feedback === 'thumbs_up'
                                     ? "bg-white shadow-sm text-emerald-500"
-                                    : "text-slate-300 hover:text-slate-500"
+                                    : "text-slate-300 hover:text-emerald-500"
                             )}
                         >
                             <ThumbsUp className={cn("w-4 h-4", feedback === 'thumbs_up' && "fill-current")} />
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={() => handleFeedback('thumbs_down')}
                             disabled={isSubmitting}
                             className={cn(
@@ -122,10 +141,10 @@ export function ResultCard({ result, rank, requestId, className }: ResultCardPro
                             )}
                         >
                             <ThumbsDown className={cn("w-4 h-4", feedback === 'thumbs_down' && "fill-current")} />
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
