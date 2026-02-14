@@ -7,11 +7,15 @@ const mockGetGenerativeModel = vi.fn().mockReturnValue({
     generateContent: mockGenerateContent,
 });
 
-vi.mock('@google/generative-ai', () => ({
-    GoogleGenerativeAI: vi.fn().mockImplementation(() => ({
-        getGenerativeModel: mockGetGenerativeModel,
-    })),
-}));
+vi.mock('@google/generative-ai', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@google/generative-ai')>();
+    return {
+        ...actual,
+        GoogleGenerativeAI: vi.fn().mockImplementation(() => ({
+            getGenerativeModel: mockGetGenerativeModel,
+        })),
+    };
+});
 
 describe('GeminiCatalogReranker', () => {
     let reranker: GeminiCatalogReranker;
@@ -36,8 +40,10 @@ describe('GeminiCatalogReranker', () => {
 
     it('should successfully rerank candidates', async () => {
         const mockOutput = {
-            rankedIds: ['2', '1'],
-            reasons: { '2': ['Better type match'] }
+            results: [
+                { id: '2', reasons: ['Better type match'] },
+                { id: '1', reasons: [] }
+            ]
         };
 
         mockGenerateContent.mockResolvedValue({
@@ -57,10 +63,67 @@ describe('GeminiCatalogReranker', () => {
         expect(result.reasons?.['2']).toContain('Better type match');
     });
 
+    it('should successfully repair malformed JSON using fallback model', async () => {
+        const malformedJson = "Invalid JSON { [";
+        const fixedOutput = {
+            results: [
+                { id: '1', reasons: ['Repair match'] },
+                { id: '2', reasons: [] }
+            ]
+        };
+
+        // First call fails (primary model)
+        mockGenerateContent.mockResolvedValueOnce({
+            response: { text: () => malformedJson },
+        });
+
+        // Second call (repair attempt 1) succeeds
+        mockGenerateContent.mockResolvedValueOnce({
+            response: { text: () => JSON.stringify(fixedOutput) },
+        });
+
+        const result = await reranker.rerank({
+            signals: mockSignals,
+            candidates: mockCandidates,
+            apiKey: 'fake-key',
+            requestId: 'repair-req',
+        });
+
+        expect(result.rankedIds).toEqual(['1', '2']);
+        expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry repair and fail if all attempts fail', async () => {
+        const malformedJson = "Invalid JSON { [";
+
+        // Primary fails
+        mockGenerateContent.mockResolvedValueOnce({
+            response: { text: () => malformedJson },
+        });
+        // Repair attempt 1 fails
+        mockGenerateContent.mockResolvedValueOnce({
+            response: { text: () => malformedJson },
+        });
+        // Repair attempt 2 fails
+        mockGenerateContent.mockResolvedValueOnce({
+            response: { text: () => malformedJson },
+        });
+
+        await expect(reranker.rerank({
+            signals: mockSignals,
+            candidates: mockCandidates,
+            apiKey: 'fake-key',
+            requestId: 'fail-req',
+        })).rejects.toThrow('Failed to repair JSON after 2 attempts');
+
+        expect(mockGenerateContent).toHaveBeenCalledTimes(3); // 1 primary + 2 repair retries
+    });
+
     it('should handle missing products by appending them to the end', async () => {
         const mockOutput = {
-            rankedIds: ['2'], // Missing ID '1'
-            reasons: {}
+            results: [
+                { id: '2', reasons: [] }
+            ]
         };
 
         mockGenerateContent.mockResolvedValue({

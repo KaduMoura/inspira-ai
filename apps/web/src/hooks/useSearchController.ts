@@ -23,6 +23,7 @@ interface SearchState {
     imagePreview: string | null;
     prompt: string;
     requestId: string | null;
+    progressMessage: string;
 }
 
 type SearchAction =
@@ -30,6 +31,7 @@ type SearchAction =
     | { type: 'REMOVE_IMAGE' }
     | { type: 'SET_PROMPT'; payload: string }
     | { type: 'START_SEARCH' }
+    | { type: 'SET_PROGRESS'; payload: string }
     | { type: 'SEARCH_SUCCESS'; payload: { results: ScoredCandidate[]; requestId: string } }
     | { type: 'SEARCH_ERROR'; payload: { message: string; code?: string } }
     | { type: 'RESET' };
@@ -42,6 +44,7 @@ const initialState: SearchState = {
     imagePreview: null,
     prompt: '',
     requestId: null,
+    progressMessage: '',
 };
 
 function searchReducer(state: SearchState, action: SearchAction): SearchState {
@@ -72,6 +75,12 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
                 ...state,
                 status: 'uploading', // Starting with uploading per typical multipart flow
                 error: null,
+                progressMessage: 'Uploading image...',
+            };
+        case 'SET_PROGRESS':
+            return {
+                ...state,
+                progressMessage: action.payload,
             };
         case 'SEARCH_SUCCESS':
             return {
@@ -141,10 +150,29 @@ export function useSearchController() {
 
         dispatch({ type: 'START_SEARCH' });
 
+        // Simulate progress updates based on expected backend latency
+        const progressTimer = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            if (elapsed > 2000 && elapsed < 6000) {
+                dispatch({ type: 'SET_PROGRESS', payload: 'Analyzing visual features...' });
+            } else if (elapsed > 6000 && elapsed < 8000) {
+                dispatch({ type: 'SET_PROGRESS', payload: 'Searching catalog...' });
+            } else if (elapsed > 8000 && elapsed < 12000) {
+                dispatch({ type: 'SET_PROGRESS', payload: 'Ranking best matches...' });
+            } else if (elapsed > 12000 && elapsed < 20000) {
+                dispatch({ type: 'SET_PROGRESS', payload: 'Refining results with AI...' });
+            } else if (elapsed > 20000) {
+                dispatch({ type: 'SET_PROGRESS', payload: 'Finalizing...' });
+            }
+        }, 1000);
+
+        const startTime = Date.now();
+
         try {
             // In a real app, we might distinguish between UPLOADING and ANALYZING
             // based on fetch progress, but for simplicity we use status transitions.
             const result = await apiClient.searchProducts(state.image, apiKey, state.prompt);
+            clearInterval(progressTimer);
 
             if (result.data) {
                 dispatch({
@@ -158,6 +186,7 @@ export function useSearchController() {
                 dispatch({ type: 'SEARCH_ERROR', payload: { message: 'Unexpected API response format.' } });
             }
         } catch (error: any) {
+            clearInterval(progressTimer);
             dispatch({
                 type: 'SEARCH_ERROR',
                 payload: {

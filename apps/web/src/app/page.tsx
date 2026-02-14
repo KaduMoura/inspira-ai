@@ -25,6 +25,7 @@ export default function HomePage() {
         setPrompt,
         executeSearch,
         reset,
+        progressMessage,
     } = useSearchController();
 
     const [isApiModalOpen, setIsApiModalOpen] = useState(false);
@@ -178,7 +179,7 @@ export default function HomePage() {
                                 {isSearching ? (
                                     <div className="flex items-center gap-3">
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        <span>Searching...</span>
+                                        <span className="min-w-[120px] text-left">{progressMessage}</span>
                                     </div>
                                 ) : "Find Matches"}
                             </motion.button>

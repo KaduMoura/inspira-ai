@@ -16,18 +16,17 @@ Constraints:
 - You MUST only use the product IDs provided in the candidate list.
 - Return ONLY a valid JSON object matching this schema:
 {
-  "rankedIds": ["id1", "id2", "..."],
-  "reasons": {
-    "id1": ["Reason 1", "Reason 2"],
-    "id2": ["Reason A"]
-  }
+  "results": [
+    { "id": "id1", "reasons": ["Reason 1", "Reason 2"] },
+    { "id": "id2", "reasons": ["Reason A"] }
+  ]
 }
 - Do not invent products.
 - Return ONLY the JSON. No prose or markdown.
 `;
 
 export function buildRerankUserPrompt(signals: any, candidates: any[], userPrompt?: string): string {
-    return `
+  return `
 --- IMAGE SIGNALS ---
 ${JSON.stringify(signals, null, 2)}
 
@@ -36,12 +35,12 @@ ${userPrompt || "Find products similar to the image."}
 
 --- CANDIDATES ---
 ${JSON.stringify(candidates.map(c => ({
-        id: c.id,
-        title: c.title,
-        category: c.category,
-        type: c.type,
-        price: c.price,
-        desc: c.description.substring(0, 200)
-    })), null, 2)}
+    id: c.id,
+    title: c.title,
+    category: c.category,
+    type: c.type,
+    price: c.price,
+    desc: c.description.substring(0, 200)
+  })), null, 2)}
 `;
 }
