@@ -26,6 +26,24 @@ export const ImageSignalsSchema = z.object({
 
 export type ImageSignals = z.infer<typeof ImageSignalsSchema>;
 
+export const CandidateSummarySchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    category: z.string(),
+    type: z.string(),
+    price: z.number(),
+    description: z.string().max(300),
+});
+
+export type CandidateSummary = z.infer<typeof CandidateSummarySchema>;
+
+export const RerankResultSchema = z.object({
+    rankedIds: z.array(z.string()),
+    reasons: z.record(z.string(), z.array(z.string())).optional(),
+});
+
+export type RerankResult = z.infer<typeof RerankResultSchema>;
+
 export enum AiErrorCode {
     AI_TIMEOUT = 'AI_TIMEOUT',
     AI_RATE_LIMIT = 'AI_RATE_LIMIT',

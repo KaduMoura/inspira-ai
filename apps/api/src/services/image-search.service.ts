@@ -1,11 +1,13 @@
-import { VisionSignalExtractor } from '../domain/ai/interfaces';
-import { ImageSignals } from '../domain/ai/schemas';
+import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
+import { ImageSignals, CandidateSummary } from '../domain/ai/schemas';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
+import { Product } from '../domain/product';
 
 export class ImageSearchService {
     constructor(
         private readonly visionExtractor: VisionSignalExtractor,
-        private readonly catalogRepository: CatalogRepository
+        private readonly catalogRepository: CatalogRepository,
+        private readonly reranker: CatalogReranker
     ) { }
 
     /**
@@ -28,7 +30,7 @@ export class ImageSearchService {
     }
 
     /**
-     * Complete Search Pipeline (to be implemented)
+     * Complete Search Pipeline
      */
     async searchByImage(
         imageBytes: Buffer,
@@ -36,21 +38,56 @@ export class ImageSearchService {
         apiKey: string,
         requestId: string,
         userPrompt?: string
-    ) {
-        // 1. Extract Signals
+    ): Promise<{ signals: ImageSignals; candidates: Product[] }> {
+        // 1. Extract Signals (Stage 1)
         const signals = await this.extractSignals(imageBytes, mimeType, apiKey, requestId, userPrompt);
 
-        // 2. Initial Retrieval
-        const candidates = await this.catalogRepository.findCandidates({
+        // 2. Initial Retrieval (Heuristic)
+        const initialCandidates = await this.catalogRepository.findCandidates({
             category: signals.categoryGuess.value,
             keywords: signals.keywords,
         });
 
-        // 3. (Stage 2) Reranking - coming next
+        if (initialCandidates.length === 0) {
+            return { signals, candidates: [] };
+        }
 
-        return {
-            signals,
-            candidates,
-        };
+        // 3. Reranking (Stage 2)
+        try {
+            const candidateSummaries: CandidateSummary[] = initialCandidates.map(c => ({
+                id: c._id?.toString() || c.title, // Fallback to title if _id missing
+                title: c.title,
+                category: c.category,
+                type: c.type,
+                price: c.price,
+                description: c.description,
+            }));
+
+            const rerankResult = await this.reranker.rerank({
+                signals,
+                candidates: candidateSummaries,
+                prompt: userPrompt,
+                apiKey,
+                requestId,
+            });
+
+            // Map and reorder
+            const candidateMap = new Map(initialCandidates.map(c => [c._id?.toString() || c.title, c]));
+            const rerankedCandidates = rerankResult.rankedIds
+                .map(id => candidateMap.get(id))
+                .filter((c): c is Product => !!c);
+
+            return {
+                signals,
+                candidates: rerankedCandidates,
+            };
+        } catch (error) {
+            console.error('[ImageSearchService] Reranking failed, falling back to heuristic order:', error);
+            // Fallback to initialOrder if Stage 2 fails
+            return {
+                signals,
+                candidates: initialCandidates,
+            };
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { ImageSignals } from './schemas';
+import { ImageSignals, CandidateSummary, RerankResult } from './schemas';
 
 export interface AiConfig {
     temperature?: number;
@@ -17,4 +17,17 @@ export interface VisionSignalExtractorInput {
 
 export interface VisionSignalExtractor {
     extractSignals(input: VisionSignalExtractorInput): Promise<ImageSignals>;
+}
+
+export interface CatalogRerankerInput {
+    signals: ImageSignals;
+    candidates: CandidateSummary[];
+    prompt?: string;
+    requestId: string;
+    apiKey: string;
+    config?: AiConfig;
+}
+
+export interface CatalogReranker {
+    rerank(input: CatalogRerankerInput): Promise<RerankResult>;
 }

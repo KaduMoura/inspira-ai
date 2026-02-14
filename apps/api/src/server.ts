@@ -4,6 +4,10 @@ import multipart from '@fastify/multipart';
 import { env } from './config/env';
 import { connectToDatabase, disconnectFromDatabase } from './infra/db';
 import { CatalogRepository } from './infra/repositories/catalog.repository';
+import { ImageSearchService } from './services/image-search.service';
+
+import { GeminiVisionSignalExtractor } from './infra/ai/gemini/gemini-vision.service';
+import { GeminiCatalogReranker } from './infra/ai/gemini/gemini-reranker.service';
 
 const server = Fastify({
     logger: env.NODE_ENV === 'production' ? true : {
@@ -45,6 +49,26 @@ async function bootstrap() {
             return {
                 database: 'connected',
                 sampleProduct: sample || 'No products found'
+            };
+        });
+
+        // Debug Pipeline (Temporary)
+        server.get('/debug/search-pipeline', async (request, reply) => {
+            const apiKey = request.headers['x-ai-api-key'] as string;
+            if (!apiKey) {
+                return reply.code(400).send({ error: 'Missing x-ai-api-key header' });
+            }
+
+            const repo = new CatalogRepository();
+            const vision = new GeminiVisionSignalExtractor();
+            const reranker = new GeminiCatalogReranker();
+
+            const service = new ImageSearchService(vision, repo, reranker);
+
+            return {
+                message: 'ImageSearchService initialized successfully.',
+                usage: 'This endpoint verifies that the Two-Stage AI Pipeline is correctly wired (Stage 1: Vision, Stage 2: Rerank).',
+                ready: true
             };
         });
 
