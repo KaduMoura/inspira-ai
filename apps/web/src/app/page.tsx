@@ -41,6 +41,43 @@ export default function HomePage() {
 
     return (
         <div className="relative min-h-screen selection:bg-primary/20 flex flex-col items-center overflow-x-hidden">
+            {/* Action Buttons */}
+            <div className="absolute top-8 right-8 flex items-center gap-4 z-[100]">
+                <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsApiModalOpen(true)}
+                    className={cn(
+                        "group flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all border shadow-sm",
+                        apiKey
+                            ? "bg-white text-slate-600 border-slate-100 hover:bg-slate-50"
+                            : "bg-[#1A73E8] text-white border-transparent hover:bg-[#1557B0] hover:shadow-lg"
+                    )}
+                >
+                    <Key className={cn("w-4 h-4", !apiKey && "text-white/80")} />
+                    {apiKey ? "Set API Key" : "Activate API Key"}
+                </motion.button>
+
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                >
+                    <Link href="/admin">
+                        <motion.div
+                            whileHover={{ scale: 1.1, rotate: 15 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2.5 rounded-full bg-white border border-slate-100 shadow-sm text-slate-400 hover:text-slate-600 hover:shadow-md transition-all flex items-center justify-center"
+                            title="Search Settings"
+                        >
+                            <Settings className="w-5 h-5" />
+                        </motion.div>
+                    </Link>
+                </motion.div>
+            </div>
+
             {/* Background Orbs */}
             <motion.div
                 className="bg-orb top-[-10%] left-[-5%] w-[45%] h-[45%] bg-[#6366f1]/10"
@@ -61,71 +98,52 @@ export default function HomePage() {
                 transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
             />
 
-            <header className="w-full max-w-[1440px] px-8 py-10 flex justify-between items-center z-[60]">
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="text-2xl font-bold tracking-tight text-[#202124] flex items-center gap-1"
-                >
-                    Kassa<span className="text-[#1A73E8]">Labs</span>
-                </motion.div>
-
-                <div className="flex items-center gap-4">
-                    <motion.button
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setIsApiModalOpen(true)}
-                        className={cn(
-                            "group flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all border shadow-sm",
-                            apiKey
-                                ? "bg-white text-slate-600 border-slate-100 hover:bg-slate-50"
-                                : "bg-[#1A73E8] text-white border-transparent hover:bg-[#1557B0] hover:shadow-lg"
-                        )}
-                    >
-                        <Key className={cn("w-4 h-4", !apiKey && "text-white/80")} />
-                        {apiKey ? "Set API Key" : "Activate API Key"}
-                    </motion.button>
-
+            <main className="flex-1 w-full max-w-5xl px-6 flex flex-col items-center justify-center pt-24 pb-12">
+                {/* Logo & Hero Section */}
+                <section className="text-center space-y-10 mb-20 flex flex-col items-center">
                     <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 }}
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className="flex flex-col items-center gap-10"
                     >
-                        <Link href="/admin">
+                        {/* Logo Wrapper */}
+                        <div className="flex items-center gap-10">
                             <motion.div
-                                whileHover={{ scale: 1.1, rotate: 15 }}
-                                whileTap={{ scale: 0.9 }}
-                                className="p-2.5 rounded-full bg-white border border-slate-100 shadow-sm text-slate-400 hover:text-slate-600 hover:shadow-md transition-all flex items-center justify-center"
-                                title="Search Settings"
+                                whileHover={{ scale: 1.05, rotate: 2 }}
+                                className="w-32 h-32 md:w-44 md:h-44 relative drop-shadow-[0_25px_50px_rgba(99,102,241,0.3)]"
                             >
-                                <Settings className="w-5 h-5" />
+                                <img
+                                    src="/logo.png"
+                                    alt="Inspira AI Logo"
+                                    className="w-full h-full object-contain"
+                                />
                             </motion.div>
-                        </Link>
-                    </motion.div>
-                </div>
-            </header>
+                            <h1 className="text-8xl md:text-9xl font-black tracking-tighter text-[#202124] flex items-center">
+                                <span className="text-gradient drop-shadow-md">Inspira AI</span>
+                            </h1>
+                        </div>
 
-            <main className="flex-1 w-full max-w-5xl px-6 flex flex-col items-center justify-center -mt-10">
-                {/* Hero Section */}
-                <section className="text-center space-y-6 mb-12">
-                    <motion.h1
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                        className="text-6xl md:text-8xl font-bold tracking-tight text-gradient"
-                    >
-                        Inspiration to reality.
-                    </motion.h1>
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3, type: "spring" }}
-                        className="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed font-light"
-                    >
-                        Upload an image and our AI fill find the perfect matches from our furniture catalog.
-                    </motion.p>
+                        <div className="space-y-6 max-w-3xl">
+                            <motion.h2
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.3, duration: 0.8 }}
+                                className="text-4xl md:text-5xl font-bold text-slate-400/60 tracking-tight"
+                            >
+                                Inspiration to reality.
+                            </motion.h2>
+
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.5, duration: 0.8 }}
+                                className="text-xl md:text-2xl text-slate-400 font-medium leading-relaxed"
+                            >
+                                Upload an image and AI will find the perfect texture catalog.
+                            </motion.p>
+                        </div>
+                    </motion.div>
                 </section>
 
                 {/* Central Interaction Card */}
