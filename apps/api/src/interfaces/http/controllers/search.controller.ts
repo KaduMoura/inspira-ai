@@ -142,12 +142,28 @@ export class SearchController {
             });
         }
 
-        // 2.5 Strip EXIF for privacy
+        // 2.5 Image Processing (Strip EXIF & Quality Check)
         try {
+            const metadata = await sharp(imageBuffer).metadata();
+
+            // Quality Check: Minimum dimensions
+            const minDim = 256;
+            if (metadata.width && metadata.height && (metadata.width < minDim || metadata.height < minDim)) {
+                return reply.code(400).send({
+                    data: null,
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `Image too small (${metadata.width}x${metadata.height}). Minimum required: ${minDim}x${minDim}.`,
+                        details: { width: metadata.width, height: metadata.height, required: minDim }
+                    },
+                    meta
+                });
+            }
+
             imageBuffer = await sharp(imageBuffer).rotate().toBuffer(); // .rotate() handles orientation then strips tags on toBuffer by default
         } catch (error) {
-            request.log.warn({ requestId, error }, 'Failed to strip EXIF data from image');
-            // Continue with original buffer if sanitization fails
+            request.log.warn({ requestId, error }, 'Failed to process image metadata or strip EXIF');
+            // Continue with original buffer if processing fails, but dimension check might have been skipped
         }
 
         // 3. Coordinate Service

@@ -106,8 +106,32 @@ export class ImageSearchService {
                 'Stage 1 (Vision)'
             );
         } catch (error) {
-            this.logger?.error(`[ImageSearchService] Stage 1 failed for request ${requestId} after retries: `, error);
-            throw error; // Initial signals are required
+            this.logger?.error(`[ImageSearchService] Stage 1 failed for request ${requestId}: `, error);
+
+            if (userPrompt) {
+                this.logger?.warn(`[ImageSearchService] Falling back to text-only retrieval using prompt: "${userPrompt}"`);
+                notices.push({
+                    code: 'VISION_FALLBACK',
+                    message: 'AI Vision failed. Falling back to text search based on your prompt.'
+                });
+
+                // Construct fallback signals based on user prompt
+                signals = {
+                    categoryGuess: { value: 'unknown', confidence: 0 },
+                    typeGuess: { value: 'unknown', confidence: 0 },
+                    attributes: { style: [], material: [], color: [], shape: [] },
+                    keywords: [userPrompt],
+                    qualityFlags: {
+                        isFurnitureLikely: true,
+                        multipleObjects: false,
+                        lowImageQuality: false,
+                        occludedOrPartial: false,
+                        lowConfidence: true
+                    }
+                };
+            } else {
+                throw error; // No prompt to fallback on
+            }
         }
         timings.stage1Ms = Date.now() - s1Start;
 
