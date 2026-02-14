@@ -57,7 +57,7 @@ The client must include an **admin page or tab** — this is an **internal, back
 
 ### **Evaluation**
 
-Think about how you would evaluate the quality of the matching results. Document your approach in the README — and if feasible, incorporate a lightweight evaluation mechanism into the system.
+Think about how you would evaluate the quality of the matching results. Document your approach in the README — and if feasible, incorporate a lightweight evaluation mechanism into the system. 
 
 ### **Edge Cases**
 
