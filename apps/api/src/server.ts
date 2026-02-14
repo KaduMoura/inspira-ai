@@ -50,6 +50,8 @@ async function bootstrap() {
         // Middleware
         await server.register(cors, {
             origin: env.CORS_ORIGIN,
+            methods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token', 'x-ai-api-key'],
         });
 
         await server.register(helmet, {
