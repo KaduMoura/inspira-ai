@@ -38,91 +38,103 @@ export class GeminiCatalogReranker implements CatalogReranker {
             return { rankedIds: [], reasons: {} };
         }
 
-        try {
-            const genAI = createGeminiClient(apiKey);
-            const model = genAI.getGenerativeModel({
-                model: env.GEMINI_MODEL_RERANK,
-                systemInstruction: RERANK_SYSTEM_PROMPT
-            });
+        const genAI = createGeminiClient(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: env.GEMINI_MODEL_RERANK,
+            systemInstruction: RERANK_SYSTEM_PROMPT
+        });
 
-            const generationConfig: GenerationConfig = {
-                temperature: config?.temperature ?? 0.1,
-                maxOutputTokens: config?.maxOutputTokens ?? 2000,
-                responseMimeType: 'application/json',
-                responseSchema: RERANK_RESPONSE_SCHEMA,
-            };
+        const generationConfig: GenerationConfig = {
+            temperature: config?.temperature ?? 0.1,
+            maxOutputTokens: config?.maxOutputTokens ?? 2000,
+            responseMimeType: 'application/json',
+            responseSchema: RERANK_RESPONSE_SCHEMA,
+        };
 
-            const userPrompt = buildRerankUserPrompt(signals, candidates, prompt);
+        const userPrompt = buildRerankUserPrompt(signals, candidates, prompt);
 
-            const result = await model.generateContent({
-                contents: [{
-                    role: 'user',
-                    parts: [{ text: userPrompt }],
-                }],
-                generationConfig,
-            });
+        const MAX_ATTEMPTS = 3;
+        let lastError: any;
 
-            const responseText = result.response.text();
-            let validated: RerankResult;
-
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            console.info(`[Reranker] Attempt ${attempt}/${MAX_ATTEMPTS} for request ${requestId}`);
             try {
-                const rawData = this.parseAndValidate(responseText);
-                validated = {
+                const result = await model.generateContent({
+                    contents: [{
+                        role: 'user',
+                        parts: [{ text: userPrompt }],
+                    }],
+                    generationConfig,
+                });
+
+                const responseText = result.response.text();
+                let rawData: any;
+
+                try {
+                    rawData = this.parseAndValidate(responseText);
+                } catch (parseError) {
+                    console.warn(`[Reranker] Primary JSON invalid on attempt ${attempt}, attempting repair with ${env.GEMINI_MODEL_VISION}...`);
+                    rawData = await this.repairJsonWithFlash2_5(responseText, apiKey, requestId);
+                }
+
+                // If we reach here, we have rawData (either from primary or repair)
+                const validated: RerankResult = {
                     rankedIds: rawData.results.map((r: any) => r.id),
                     reasons: rawData.results.reduce((acc: any, curr: any) => {
                         acc[curr.id] = curr.reasons;
                         return acc;
                     }, {})
                 };
-            } catch (error) {
-                // Stage 2.1: Robust Repair with Gemini 2.5 Flash
-                console.warn(`[Reranker] Primary JSON invalid for request ${requestId}, attempting repair with ${env.GEMINI_MODEL_VISION}...`);
-                const repairedRaw = await this.repairJsonWithFlash2_5(responseText, apiKey, requestId);
-                validated = {
-                    rankedIds: repairedRaw.results.map((r: any) => r.id),
-                    reasons: repairedRaw.results.reduce((acc: any, curr: any) => {
-                        acc[curr.id] = curr.reasons;
-                        return acc;
-                    }, {})
+
+                // Pre-filtering: Ensure all returned IDs exist in candidates
+                const candidateIds = new Set(candidates.map(c => c.id));
+                const filteredIds = validated.rankedIds.filter((id: string) => candidateIds.has(id));
+
+                // Post-filling: Append any missing IDs from candidates to the end
+                const rankedSet = new Set(filteredIds);
+                candidates.forEach(c => {
+                    if (!rankedSet.has(c.id)) {
+                        filteredIds.push(c.id);
+                    }
+                });
+
+                console.info(`[Reranker] Successfully reranked on attempt ${attempt} for request ${requestId}`);
+                return {
+                    rankedIds: filteredIds,
+                    reasons: validated.reasons || {},
                 };
-            }
 
-            // Ensure all returned IDs exist in candidates
-            const candidateIds = new Set(candidates.map(c => c.id));
-            const filteredIds = validated.rankedIds.filter((id: string) => candidateIds.has(id));
+            } catch (error: any) {
+                lastError = error;
+                const status = error?.status || error?.response?.status;
+                const message = error?.message || 'Unknown Rerank error';
 
-            // Append any missing IDs from candidates to the end
-            const rankedSet = new Set(filteredIds);
-            candidates.forEach(c => {
-                if (!rankedSet.has(c.id)) {
-                    filteredIds.push(c.id);
+                console.error(`[Reranker] Attempt ${attempt} failed for request ${requestId}: ${message}`);
+
+                // detailed debug info
+                if (error?.response) {
+                    console.error("DEBUG: Error Response:", JSON.stringify(error.response, null, 2));
                 }
-            });
 
-            return {
-                rankedIds: filteredIds,
-                reasons: validated.reasons || {},
-            };
-        } catch (error: any) {
-            console.error("DEBUG: Full Rerank Error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-            if (error?.response) {
-                console.error("DEBUG: Error Response:", JSON.stringify(error.response, null, 2));
+                // Fail fast on auth errors
+                if (status === 401 || status === 403) {
+                    throw new AiError(AiErrorCode.PROVIDER_AUTH_ERROR, 'Invalid API Key', error);
+                }
+
+                if (attempt === MAX_ATTEMPTS) {
+                    if (error instanceof AiError) throw error;
+                    // Final attempt failed, throw as internal error
+                    throw new AiError(AiErrorCode.INTERNAL_ERROR, `Reranking failed after ${MAX_ATTEMPTS} attempts: ${message}`, error);
+                }
+
+                // Exponential backoff for retriable errors
+                const delay = Math.min(Math.pow(2, attempt) * 1000, 5000);
+                console.info(`[Reranker] Waiting ${delay}ms before next attempt...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
-
-            if (error instanceof AiError) throw error;
-
-            const status = error?.status || error?.response?.status;
-            const message = error?.message || 'Unknown Rerank error';
-
-            if (status === 401 || status === 403) {
-                throw new AiError(AiErrorCode.PROVIDER_AUTH_ERROR, 'Invalid API Key', error);
-            }
-            if (status === 429) {
-                throw new AiError(AiErrorCode.PROVIDER_RATE_LIMIT, 'Quota exceeded', error);
-            }
-
-            throw new AiError(AiErrorCode.INTERNAL_ERROR, message, error);
         }
+
+        throw new AiError(AiErrorCode.INTERNAL_ERROR, 'Reranking failed: Maximum attempts exceeded');
     }
 
     /**

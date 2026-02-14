@@ -40,7 +40,11 @@ async function bootstrap() {
         server.log.info({
             adminToken: env.ADMIN_TOKEN.substring(0, 3) + '***',
             nodeEnv: env.NODE_ENV,
-            aiProvider: env.AI_PROVIDER
+            aiProvider: env.AI_PROVIDER,
+            timeouts: {
+                stage2: env.STAGE2_TIMEOUT_MS,
+                total: env.TOTAL_TIMEOUT_MS
+            }
         }, 'Backend infrastructure initialized');
 
         // Middleware

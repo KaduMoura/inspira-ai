@@ -1,11 +1,20 @@
 import { AdminConfig, AdminConfigSchema, DEFAULT_ADMIN_CONFIG } from '../domain/config.schema';
+import { env } from './env';
 
 export class AppConfigService {
     private static instance: AppConfigService;
     private config: AdminConfig;
 
     private constructor() {
-        this.config = { ...DEFAULT_ADMIN_CONFIG };
+        this.config = {
+            ...DEFAULT_ADMIN_CONFIG,
+            timeoutsMs: {
+                ...DEFAULT_ADMIN_CONFIG.timeoutsMs,
+                stage1: env.STAGE1_TIMEOUT_MS,
+                stage2: env.STAGE2_TIMEOUT_MS,
+                total: env.TOTAL_TIMEOUT_MS,
+            }
+        };
     }
 
     public static getInstance(): AppConfigService {
