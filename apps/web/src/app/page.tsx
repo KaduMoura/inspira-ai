@@ -108,39 +108,41 @@ export default function HomePage() {
                         className="flex flex-col items-center gap-10"
                     >
                         {/* Logo Wrapper */}
-                        <div className="flex items-center gap-10">
-                            <motion.div
-                                whileHover={{ scale: 1.05, rotate: 2 }}
-                                className="w-32 h-32 md:w-44 md:h-44 relative drop-shadow-[0_25px_50px_rgba(99,102,241,0.3)]"
-                            >
-                                <img
-                                    src="/logo.png"
-                                    alt="Inspira AI Logo"
-                                    className="w-full h-full object-contain"
-                                />
-                            </motion.div>
-                            <h1 className="text-8xl md:text-9xl font-black tracking-tighter text-[#202124] flex items-center">
-                                <span className="text-gradient drop-shadow-md">Inspira AI</span>
-                            </h1>
-                        </div>
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-10">
+                                <motion.div
+                                    whileHover={{ scale: 1.05, rotate: 2 }}
+                                    className="w-32 h-32 md:w-44 md:h-44 relative drop-shadow-[0_25px_50px_rgba(99,102,241,0.3)]"
+                                >
+                                    <img
+                                        src="/logo.png"
+                                        alt="Inspira AI Logo"
+                                        className="w-full h-full object-contain"
+                                    />
+                                </motion.div>
+                                <h1 className="text-8xl md:text-9xl font-black tracking-tighter text-[#202124] flex items-center">
+                                    <span className="text-gradient drop-shadow-md">Inspira AI</span>
+                                </h1>
+                            </div>
 
-                        <div className="space-y-6 max-w-3xl">
                             <motion.h2
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.3, duration: 0.8 }}
-                                className="text-4xl md:text-5xl font-bold text-slate-400/60 tracking-tight"
+                                className="text-2xl md:text-3xl font-bold text-slate-400/40 tracking-tight mr-2 -mt-2"
                             >
                                 Inspiration to reality.
                             </motion.h2>
+                        </div>
 
+                        <div className="max-w-2xl px-4">
                             <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5, duration: 0.8 }}
-                                className="text-xl md:text-2xl text-slate-400 font-medium leading-relaxed"
+                                className="text-xl md:text-2xl text-slate-500/80 font-medium leading-relaxed"
                             >
-                                Upload an image and AI will find the perfect texture catalog.
+                                Transform your inspiration into your home. Upload any photo and our AI will find the perfect furniture matches from across our catalog.
                             </motion.p>
                         </div>
                     </motion.div>

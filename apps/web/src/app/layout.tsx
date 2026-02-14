@@ -15,12 +15,16 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
     title: {
-        default: "Kassa Labs | Image-Based Product Search",
-        template: "%s | Kassa Labs",
+        default: "Inspira AI | Inspiration to Reality",
+        template: "%s | Inspira AI",
     },
     description: "Reinventing how people go from inspiration to reality in home furnishing using agentic AI.",
-    keywords: ["AI", "Home Furnishing", "Product Search", "Image Search", "Kassa Labs"],
-    authors: [{ name: "Kassa Labs Team" }],
+    keywords: ["AI", "Home Furnishing", "Product Search", "Image Search", "Inspira AI"],
+    authors: [{ name: "Inspira AI Team" }],
+    icons: {
+        icon: "/logo.png",
+        apple: "/logo.png",
+    },
 };
 
 export const viewport = {
