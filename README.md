@@ -1,6 +1,6 @@
-# Kassa — AI-Powered Product Search
+# Inspira AI — AI-Powered Product Search
 
-Kassa is an agentic AI-powered furniture search engine. It allows users to upload an image of a furniture item and receive highly relevant, ranked matches from a catalog, optionally refining the results with natural language prompts.
+Inspira AI is an agentic AI-powered furniture search engine. It allows users to upload an image of a furniture item and receive highly relevant, ranked matches from a catalog, optionally refining the results with natural language prompts.
 
 This project was built as a technical assessment, focusing on **retrieval quality, ranking precision, and internal tunability**.
 
@@ -68,10 +68,66 @@ The system follows a modern full-stack architecture:
 -   **Frontend**: Next.js (App Router) + TypeScript.
 -   **Backend**: Node.js + Fastify + TypeScript.
 -   **Database**: MongoDB (Read-only Product Catalog).
--   **AI Engine**: Google Gemini (1.5 Flash) for Vision and Reranking.
+-   **AI Engine**: Google Gemini (2.5 Flash) for Vision and (3 Flash Preview) for Reranking.
+
+### Visual Workflow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant FE as Frontend (Web)
+    participant API as API Gateway (Fastify)
+    participant Svc as ImageSearchService
+    participant AI as AI System (Gemini)
+    participant DB as Database (Mongo)
+    participant Tel as Telemetry (In-Memory)
+
+    User->>FE: Click "Set API Key" & Input Key
+    FE->>FE: Store Key (Local State)
+    
+    User->>FE: Upload Image + Optional Prompt
+    FE->>FE: Compress Image
+    FE->>API: POST /api/search (Multipart + x-ai-api-key)
+    API->>API: Validate Header & Image Magic Bytes
+    API->>Svc: Process Search Request
+    
+    rect rgb(240, 248, 255)
+        note right of Svc: Stage 1: Recognition
+        Svc->>AI: Vision Analysis (Gemini 2.5 Flash)
+        AI-->>Svc: Extracted Signals (JSON)
+    end
+
+    rect rgb(255, 250, 240)
+        note right of Svc: Retrieval & Scoring
+        Svc->>DB: Query Candidates (Filter + Text)
+        DB-->>Svc: Candidate Products
+        Svc->>Svc: Heuristic Scoring
+    end
+
+    rect rgb(240, 255, 240)
+        note right of Svc: Stage 2: Reasoning
+        Svc->>AI: Rerank Top Candidates (Gemini 3 Flash Preview)
+        AI-->>Svc: Reordered List
+    end
+
+    Svc->>Tel: Record Event (Ring Buffer)
+    Svc-->>API: Formatted Results
+    API-->>FE: Search Response (JSON)
+    FE->>User: Display Results Grid
+
+    opt User Feedback
+        User->>FE: Click "Thumbs Up/Down"
+        FE->>API: POST /api/feedback/:requestId
+        API->>Tel: Update Event with Feedback
+    end
+```
+
+For comprehensive details, please refer to:
+-   [**Detailed System Workflow**](./WORKFLOW.md): Full breakdown of logic, data flows, and failure scenarios.
+-   [**Sequence Diagrams**](./WORKFLOW_DIAGRAMS.md): Detailed charts for the backend pipeline and failure recovery.
 
 ### The Matching Pipeline
-The heart of Kassa is its **Two-Stage Search Pipeline**:
+The heart of Inspira AI is its **Two-Stage Search Pipeline**:
 
 1.  **Signal Extraction (Stage 1)**:
     -   Gemini Vision analyzes the uploaded image.
@@ -91,7 +147,7 @@ The heart of Kassa is its **Two-Stage Search Pipeline**:
 
 ## 🎛️ Admin & Tunability
 
-Kassa includes an **Internal Admin Console** allowing back-office users to tune the search engine without code changes:
+Inspira AI includes an **Internal Admin Console** allowing back-office users to tune the search engine without code changes:
 -   **Weights**: Adjust the importance of Text vs. Category vs. Dimensions vs. Style.
 -   **Thresholds**: Define what constitutes a "High", "Medium", or "Low" match.
 -   **Strategy**: Toggle LLM reranking and adjust candidate set sizes for performance/cost balance.
@@ -101,7 +157,7 @@ Kassa includes an **Internal Admin Console** allowing back-office users to tune 
 
 ## 📊 Quality Evaluation
 
-To ensure relevance, Kassa includes a built-in evaluation framework:
+To ensure relevance, Inspira AI includes a built-in evaluation framework:
 
 ### The "Golden Set"
 We maintain a curated `golden-set.json` containing pairs of images + prompts with expected high-relevance matches.
