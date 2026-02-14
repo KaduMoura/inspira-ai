@@ -91,8 +91,7 @@ Be prepared to walk through a live demo, explain your implementation, and discus
 
 # Job Description:
 
-```
-# Sr AI Engineer
+## Sr AI Engineer
 **Fullstack Senior | Remote 🇮🇱**
 
 ### Tech Stack
@@ -144,4 +143,3 @@ Kassa Labs is reinventing how people go from inspiration to reality in home furn
 - Professional growth opportunities.
 - Opportunity to work on cutting-edge technologies.
 - A collaborative and supportive team environment.
-```

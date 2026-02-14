@@ -71,7 +71,7 @@ export default function AdminPage() {
                             Authorized Terminal
                         </div>
                         <h1 className="text-4xl font-display font-black tracking-tight flex items-center gap-3">
-                            Kassa Console
+                            Inspira AI Console
                         </h1>
                         <p className="text-muted-foreground max-w-lg">
                             System-level configuration and real-time observability for agentic matching flows.
