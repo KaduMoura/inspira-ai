@@ -4,6 +4,11 @@ Inspira AI is an agentic AI-powered furniture search engine. It allows users to 
 
 This project was built as a technical assessment, focusing on **retrieval quality, ranking precision, and internal tunability**.
 
+```markdown
+For a deep dive into the system architecture, design choices, and evaluation methodology, please refer to the [Technical Assessment Response](.docs/18-technical-assessment-response.md).
+```
+
+
 ---
 
 ## ⚡ Quick Start (Docker)
@@ -13,7 +18,7 @@ The fastest way to run the entire stack (API, Web, and Database) is using Docker
 1.  **Clone the repository**.
 2.  **Start the services**:
     ```bash
-    docker compose --profile demo up --build
+    docker compose up
     ```
 3.  **Access the applications**:
     -   **Web Interface**: [http://localhost:3000](http://localhost:3000)
