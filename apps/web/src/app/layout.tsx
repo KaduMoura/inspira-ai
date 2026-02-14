@@ -14,8 +14,18 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-    title: "Kassa Labs | Image-Based Product Search",
+    title: {
+        default: "Kassa Labs | Image-Based Product Search",
+        template: "%s | Kassa Labs",
+    },
     description: "Reinventing how people go from inspiration to reality in home furnishing using agentic AI.",
+    keywords: ["AI", "Home Furnishing", "Product Search", "Image Search", "Kassa Labs"],
+    authors: [{ name: "Kassa Labs Team" }],
+};
+
+export const viewport = {
+    width: "device-width",
+    initialScale: 1,
 };
 
 export default function RootLayout({
