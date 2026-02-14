@@ -1,72 +1,89 @@
-# Kassa API
+# Kassa API Service
 
-Backend service for Kassa AI-driven furniture search.
+## Overview
+This is the backend service for the Kassa Image Search application. It orchestrates the Two-Stage AI Pipeline:
+1. **Vision Signal Extraction:** Uses Gemini 2.5 Flash to analyze uploaded images.
+2. **Catalog Retrieval:** Searches a read-only MongoDB catalog using heuristic plans (TEXT, A, B, C, D).
+3. **Reranking:** Uses Gemini 3 Flash to reorder candidates based on relevance.
 
-## Tech Stack
-- **Runtime**: Node.js (v20+)
-- **Framework**: Fastify
-- **Database**: MongoDB
-- **AI**: Google Gemini (Vision & Reranking)
+Built with **Fastify**, **TypeScript**, and **MongoDB**.
 
-## Setup
+## Getting Started
 
-### 1. Environment Variables
-Create a `.env` file in this directory:
-```env
-PORT=4000
-MONGO_URI=mongodb://localhost:27017/kassa
-ADMIN_TOKEN=your-secret-token
-CORS_ORIGIN=*
-```
+### Prerequisites
+- Node.js v20+
+- pnpm
+- MongoDB instance (local or remote)
+- Google Gemini API Key
 
-### 2. Install Dependencies
+### Installation
+
 ```bash
+cd apps/api
 pnpm install
 ```
 
-### 3. Seed Database
-To populate the catalog with demo furniture data:
+### Environment Variables
+Copy `.env.example` to `.env`:
+
 ```bash
-pnpm seed
+cp .env.example .env
 ```
 
-## Running the Application
+Required variables:
+- `PORT`: Service port (default 4000)
+- `MONGO_URI`: Connection string to MongoDB
+- `CORS_ORIGIN`: Allowed frontend origin
+- `ADMIN_TOKEN`: Token for protecting Admin endpoints
+- `GEMINI_API_KEY`: For running scripts manually (API keys are usually passed per-request from client)
 
-### Development
+### Running Locally
+
 ```bash
+# Development mode (watch)
 pnpm dev
-```
 
-### Production (Build & Start)
-```bash
+# Production build
 pnpm build
 pnpm start
 ```
 
-### Docker
+### Seeding Data
+To populate the database with demo products and create indexes:
+
 ```bash
-docker build -t kassa-api -f Dockerfile ../../
-docker run -p 4000:4000 --env-file .env kassa-api
+pnpm seed
 ```
 
-## API Quick Reference
+## Architecture
+- **`src/interfaces/http`**: Controllers, Routes, Schemas (Zod), Middleware.
+- **`src/domain`**: Core business logic, Entities, ranking interfaces.
+- **`src/services`**: Orchestrators (ImageSearch, Telemetry).
+- **`src/infra`**: External adapters (MongoDB, Gemini).
+- **`src/config`**: Environment and App Configuration.
 
-### Search
-- **Endpoint**: `POST /api/search`
-- **Auth**: Header `x-ai-api-key: <gemini-api-key>`
-- **Body**: `multipart/form-data`
-  - `image`: Image file (JPEG/PNG/WebP)
-  - `prompt`: String (Optional instructions)
-
-### Admin
-All admin routes require Header `x-admin-token: <ADMIN_TOKEN>`.
+## Key Endpoints
+- `POST /api/search`: Main search endpoint (multipart/form-data).
+- `GET /health`: Healthcheck.
 - `GET /api/admin/config`: Get current tuning parameters.
-- `PATCH /api/admin/config`: Update parameters (volatile).
-- `POST /api/admin/config/reset`: Reset to defaults.
-- `GET /api/admin/telemetry`: View recent search performance.
+- `PUT /api/admin/config`: Update parameters (requires `x-admin-token`).
+- `GET /api/admin/telemetry/export`: Download recent search telemetry.
 
-## Security
-- **API Keys**: Stored in-memory only (per request).
-- **Rate Limiting**: Enforced per IP.
-- **Uploads**: Magic byte validation and size limits.
-- **Admin**: Protected by token gate.
+## Evaluation
+To run the automated quality evaluation against the Golden Set:
+
+1. Place test images in `eval/images/`.
+2. Ensure `golden-set.json` matches the images.
+3. Run:
+
+```bash
+export GEMINI_API_KEY=your_key
+npx ts-node scripts/evaluate-quality.ts
+```
+
+## Testing
+Run unit and integration tests:
+
+```bash
+pnpm test
+```

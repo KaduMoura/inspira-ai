@@ -5,7 +5,7 @@ import { AppConfigService } from '../config/app-config.service';
 import { TelemetryService } from '../services/telemetry.service';
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
-import { MatchBand } from '../domain/ai/schemas';
+
 
 describe('Search Pipeline Logic', () => {
     let service: ImageSearchService;

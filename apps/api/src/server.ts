@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 import { env } from './config/env';
 import { connectToDatabase, disconnectFromDatabase } from './infra/db';
 import { CatalogRepository } from './infra/repositories/catalog.repository';
@@ -40,6 +41,10 @@ async function bootstrap() {
         // Middleware
         await server.register(cors, {
             origin: env.CORS_ORIGIN,
+        });
+
+        await server.register(helmet, {
+            contentSecurityPolicy: false // API-only, strict CSP not primary focus but header presence essential
         });
 
         await server.register(multipart, {

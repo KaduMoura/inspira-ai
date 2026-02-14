@@ -1,4 +1,4 @@
-import { SearchTimings, SearchNotice } from '../domain/ai/schemas';
+import { SearchTimings } from '../domain/ai/schemas';
 
 export interface TelemetryEvent {
     requestId: string;

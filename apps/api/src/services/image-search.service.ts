@@ -1,3 +1,4 @@
+
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
 import { ImageSignals, CandidateSummary, SearchResponse, ScoredCandidate, SearchTimings, SearchNotice } from '../domain/ai/schemas';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
@@ -25,7 +26,7 @@ export class ImageSearchService {
     private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, stageName: string): Promise<T> {
         let timeoutHandle: any;
         const timeoutPromise = new Promise<never>((_, reject) => {
-            timeoutHandle = setTimeout(() => reject(new Error(`${stageName} timed out after ${timeoutMs}ms`)), timeoutMs);
+            timeoutHandle = setTimeout(() => reject(new Error(`${stageName} timed out after ${timeoutMs} ms`)), timeoutMs);
         });
 
         try {
@@ -49,7 +50,7 @@ export class ImageSearchService {
                 const isTransient = error.code === 'AI_RATE_LIMIT' || error.status >= 500 || error.code === 'AI_NETWORK_ERROR';
 
                 if (attempt < maxRetries && isTransient) {
-                    this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error:`, error.message);
+                    this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error: `, error.message);
                     continue;
                 }
                 break;
@@ -103,7 +104,7 @@ export class ImageSearchService {
                 'Stage 1 (Vision)'
             );
         } catch (error) {
-            this.logger?.error(`[ImageSearchService] Stage 1 failed for request ${requestId} after retries:`, error);
+            this.logger?.error(`[ImageSearchService] Stage 1 failed for request ${requestId} after retries: `, error);
             throw error; // Initial signals are required
         }
         timings.stage1Ms = Date.now() - s1Start;
@@ -224,7 +225,7 @@ export class ImageSearchService {
                 scoredCandidates = [...rerankedCandidates, ...remaining];
                 timings.stage2Ms = Date.now() - s2Start;
             } catch (error) {
-                this.logger?.error(`[ImageSearchService] Reranking failed for request ${requestId}, falling back to heuristic order:`, error);
+                this.logger?.error(`[ImageSearchService] Reranking failed for request ${requestId}, falling back to heuristic order: `, error);
                 notices.push({ code: 'RERANK_FAILED', message: 'Falling back to heuristic ranking.' });
                 timings.stage2Ms = Date.now() - s2Start;
             }

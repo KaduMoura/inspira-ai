@@ -3,7 +3,7 @@ import { ImageSearchService } from './image-search.service';
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
 import { TelemetryService } from './telemetry.service';
-import { ImageSignals, MatchBand } from '../domain/ai/schemas';
+import { ImageSignals } from '../domain/ai/schemas';
 import { Product } from '../domain/product';
 import { ObjectId } from 'mongodb';
 import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
