@@ -56,6 +56,7 @@ export class ImageSearchService {
         const mongoStart = Date.now();
         const initialCandidates = await this.catalogRepository.findCandidates({
             category: signals.categoryGuess.value,
+            type: signals.typeGuess.value,
             keywords: signals.keywords,
             limit: config.candidateTopN
         });
@@ -63,11 +64,20 @@ export class ImageSearchService {
 
         if (initialCandidates.length === 0) {
             timings.totalMs = Date.now() - startTime;
-            return {
+            const response = {
                 query: { prompt: userPrompt, signals },
                 results: [],
                 meta: { requestId, timings, notices }
             };
+
+            this.logger?.info('[Search Summary] No candidates found', {
+                requestId,
+                timings,
+                counts: { retrieved: 0, reranked: 0, returned: 0 },
+                flags: { fallbackVision: false, fallbackRerank: false }
+            });
+
+            return response;
         }
 
         // 3. Heuristic Pre-Ranking (Stage 1.5)
@@ -87,12 +97,15 @@ export class ImageSearchService {
         // Sort by heuristic score
         scoredCandidates.sort((a, b) => b.score - a.score);
 
+        let candidatesRerankedCount = 0;
+
         // 4. Reranking (Stage 2)
         if (config.enableLLMRerank) {
             const s2Start = Date.now();
             try {
                 // Only send top M candidates to LLM
                 const topCandidates = scoredCandidates.slice(0, config.llmRerankTopM);
+                candidatesRerankedCount = topCandidates.length;
 
                 const rerankResult = await this.reranker.rerank({
                     signals,
@@ -124,10 +137,26 @@ export class ImageSearchService {
         }
 
         timings.totalMs = Date.now() - startTime;
+        const results = scoredCandidates.slice(0, config.rerankOutputK);
+
+        // Structured Search Summary Logger
+        this.logger?.info('[Search Summary] Completed', {
+            requestId,
+            timings,
+            counts: {
+                retrieved: initialCandidates.length,
+                reranked: candidatesRerankedCount,
+                returned: results.length
+            },
+            flags: {
+                rerankEnabled: config.enableLLMRerank,
+                hasPrompt: !!userPrompt
+            }
+        });
 
         return {
             query: { prompt: userPrompt, signals },
-            results: scoredCandidates.slice(0, config.rerankOutputK),
+            results,
             meta: {
                 requestId,
                 timings,

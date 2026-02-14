@@ -120,10 +120,16 @@ describe('Search Routes Integration', () => {
             `--${boundary}--`
         ].join('\r\n');
 
-        mockSearchByImage.mockResolvedValueOnce({
-            signals: { categoryGuess: { value: 'test' } },
-            candidates: []
-        });
+        const mockResponse = {
+            query: { signals: { categoryGuess: { value: 'test' } } },
+            results: [],
+            meta: {
+                requestId: 'test-req',
+                timings: { totalMs: 100, stage1Ms: 20, mongoMs: 30, stage2Ms: 50 },
+                notices: [{ code: 'TEST', message: 'test' }]
+            }
+        };
+        mockSearchByImage.mockResolvedValueOnce(mockResponse);
 
         const response = await server.inject({
             method: 'POST',
@@ -136,6 +142,11 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(200);
+        const payload = JSON.parse(response.body);
+        expect(payload.meta).toBeDefined();
+        expect(payload.meta.requestId).toBe('test-req');
+        expect(payload.meta.timings.totalMs).toBe(100);
+        expect(payload.meta.notices).toHaveLength(1);
         expect(mockSearchByImage).toHaveBeenCalled();
     });
 });

@@ -16,33 +16,36 @@ export class CatalogRepository {
         const limit = criteria.limit || 50;
         const minCandidates = 5;
 
-        let currentBest: Product[] = [];
-
-        // Plan A: Strict Category + Keywords
-        if (criteria.category && criteria.keywords?.length) {
-            currentBest = await this.executePlanA(criteria, limit);
-            if (currentBest.length >= minCandidates) return currentBest;
+        // Plan A: Category + Type + Keywords (High Precision)
+        if (criteria.category && criteria.type && criteria.keywords?.length) {
+            const results = await this.executePlanA(criteria, limit);
+            if (results.length >= minCandidates) return results;
         }
 
-        // Plan B: Category / Type matching
-        if (criteria.category) {
+        // Plan B: Category + Keywords
+        if (criteria.category && criteria.keywords?.length) {
             const results = await this.executePlanB(criteria, limit);
             if (results.length >= minCandidates) return results;
-            if (results.length > currentBest.length) currentBest = results;
         }
 
-        // Plan C: Broad Keyword Search
-        const finalResults = await this.executePlanC(criteria, limit);
-        if (finalResults.length >= minCandidates || finalResults.length >= currentBest.length) {
-            return finalResults;
+        // Plan C: Broad Keyword Search (Recall focus)
+        if (criteria.keywords?.length) {
+            const results = await this.executePlanC(criteria, limit);
+            if (results.length >= minCandidates) return results;
         }
 
-        return currentBest;
+        // Plan D: Category + Type matching (if all keyword searches failed)
+        if (criteria.category || criteria.type) {
+            return this.executePlanD(criteria, limit);
+        }
+
+        return [];
     }
 
     private async executePlanA(criteria: SearchCriteria, limit: number): Promise<Product[]> {
         const query: Filter<Product> = {
             category: criteria.category,
+            type: criteria.type,
             $or: criteria.keywords?.map(kw => ({
                 $or: [
                     { title: { $regex: kw, $options: 'i' } },
@@ -56,19 +59,20 @@ export class CatalogRepository {
 
     private async executePlanB(criteria: SearchCriteria, limit: number): Promise<Product[]> {
         const query: Filter<Product> = {
-            $or: [
-                { category: criteria.category },
-                { type: criteria.type }
-            ].filter(Boolean) as Filter<Product>[]
+            category: criteria.category,
+            $or: criteria.keywords?.map(kw => ({
+                $or: [
+                    { title: { $regex: kw, $options: 'i' } },
+                    { description: { $regex: kw, $options: 'i' } }
+                ]
+            })) || []
         };
 
         return this.collection.find(query).limit(limit).toArray();
     }
 
     private async executePlanC(criteria: SearchCriteria, limit: number): Promise<Product[]> {
-        if (!criteria.keywords?.length) {
-            return this.collection.find({}).limit(limit).toArray();
-        }
+        if (!criteria.keywords?.length) return [];
 
         const query: Filter<Product> = {
             $or: criteria.keywords.map(kw => ({
@@ -78,6 +82,18 @@ export class CatalogRepository {
                 ]
             }))
         };
+
+        return this.collection.find(query).limit(limit).toArray();
+    }
+
+    private async executePlanD(criteria: SearchCriteria, limit: number): Promise<Product[]> {
+        const filters: Filter<Product>[] = [];
+        if (criteria.category) filters.push({ category: criteria.category });
+        if (criteria.type) filters.push({ type: criteria.type });
+
+        if (filters.length === 0) return [];
+
+        const query: Filter<Product> = { $or: filters };
 
         return this.collection.find(query).limit(limit).toArray();
     }

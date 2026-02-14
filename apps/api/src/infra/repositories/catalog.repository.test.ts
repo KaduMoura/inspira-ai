@@ -26,39 +26,44 @@ describe('CatalogRepository', () => {
         repository = new CatalogRepository();
     });
 
-    it('should execute Plan A when category and keywords are present', async () => {
-        mockCollection.toArray.mockResolvedValueOnce([{ title: 'Product A' }]);
+    it('should execute Plan A when category, type, and keywords are present', async () => {
+        mockCollection.toArray.mockResolvedValueOnce([{ title: 'Product A' }, { title: 'A2' }, { title: 'A3' }, { title: 'A4' }, { title: 'A5' }]);
 
         const results = await repository.findCandidates({
             category: 'furniture',
-            keywords: ['sofa']
+            type: 'chair',
+            keywords: ['wood']
         });
 
-        expect(results).toHaveLength(1);
+        expect(results).toHaveLength(5);
         expect(mockCollection.find).toHaveBeenCalledWith(expect.objectContaining({
             category: 'furniture',
+            type: 'chair',
             $or: expect.any(Array)
         }));
     });
 
-    it('should fallback to Plan B and then C if results are below threshold', async () => {
-        // Plan A returns 0
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        // Plan B returns 1 (below threshold of 5)
-        mockCollection.toArray.mockResolvedValueOnce([{ title: 'Product B' }]);
-        // Plan C returns 2 (better than B, still below threshold but best so far)
-        mockCollection.toArray.mockResolvedValueOnce([{ title: 'Product C1' }, { title: 'Product C2' }]);
+    it('should fallback to Plan B if Plan A returns too few results', async () => {
+        // Plan A returns 1 (below threshold of 5)
+        mockCollection.toArray.mockResolvedValueOnce([{ title: 'A' }]);
+        // Plan B returns 6 (satisfies threshold)
+        mockCollection.toArray.mockResolvedValueOnce(new Array(6).fill({ title: 'B' }));
 
         const results = await repository.findCandidates({
             category: 'furniture',
-            keywords: ['sofa']
+            type: 'chair',
+            keywords: ['wood']
         });
 
-        expect(results).toHaveLength(2);
-        expect(results[0].title).toBe('Product C1');
+        expect(results).toHaveLength(6);
+        // Second call should be Plan B (category + keywords, no type)
+        expect(mockCollection.find).toHaveBeenNthCalledWith(2, {
+            category: 'furniture',
+            $or: expect.any(Array)
+        });
     });
 
-    it('should execute Plan C if no category is provided', async () => {
+    it('should execute Plan C if no category/type provided but keywords exist', async () => {
         mockCollection.toArray.mockResolvedValue([{ title: 'Product C' }]);
 
         const results = await repository.findCandidates({
@@ -66,9 +71,32 @@ describe('CatalogRepository', () => {
         });
 
         expect(results).toHaveLength(1);
-        expect(mockCollection.find).toHaveBeenCalledWith(expect.objectContaining({
+        expect(mockCollection.find).toHaveBeenCalledWith({
             $or: expect.any(Array)
-        }));
+        });
+    });
+
+    it('should execute Plan D as last resort if category/type exist but keywords found nothing', async () => {
+        // Plan A, B, C all empty
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        // Plan D returns something
+        mockCollection.toArray.mockResolvedValueOnce([{ title: 'D' }]);
+
+        const results = await repository.findCandidates({
+            category: 'furniture',
+            type: 'chair',
+            keywords: ['nonexistent']
+        });
+
+        expect(results).toHaveLength(1);
+        expect(mockCollection.find).toHaveBeenLastCalledWith({
+            $or: [
+                { category: 'furniture' },
+                { type: 'chair' }
+            ]
+        });
     });
 
     describe('findById', () => {
