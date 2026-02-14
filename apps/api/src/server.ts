@@ -77,7 +77,7 @@ async function bootstrap() {
         });
 
         // Error Handler
-        server.setErrorHandler((error, request, reply) => {
+        server.setErrorHandler((error: any, request, reply) => {
             // Log full error details
             request.log.error(error);
 

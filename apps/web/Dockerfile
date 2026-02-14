@@ -2,7 +2,7 @@
 FROM node:24.13-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 WORKDIR /app
 COPY . .
 

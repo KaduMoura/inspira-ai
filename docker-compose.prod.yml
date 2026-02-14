@@ -6,6 +6,7 @@ services:
     ports:
       - "4000:4000"
     environment:
+      - CI=true
       - PORT=4000
       - NODE_ENV=production
       - MONGO_URI=${MONGO_URI}
@@ -18,4 +19,5 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - CI=true
       - NODE_ENV=production

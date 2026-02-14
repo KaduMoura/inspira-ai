@@ -2,7 +2,7 @@
 FROM node:24.13-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 WORKDIR /app
 COPY . .
 
@@ -13,12 +13,17 @@ RUN pnpm --filter api build
 
 # Runtime stage
 FROM node:24.13-slim AS runtime
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 RUN apt-get update && apt-get install -y libvips-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/package.json ./package.json
+COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-RUN npm install --omit=dev
+RUN pnpm install --prod --no-frozen-lockfile
 
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
