@@ -22,6 +22,7 @@ interface SearchState {
     image: File | null;
     imagePreview: string | null;
     prompt: string;
+    requestId: string | null;
 }
 
 type SearchAction =
@@ -29,7 +30,7 @@ type SearchAction =
     | { type: 'REMOVE_IMAGE' }
     | { type: 'SET_PROMPT'; payload: string }
     | { type: 'START_SEARCH' }
-    | { type: 'SEARCH_SUCCESS'; payload: ScoredCandidate[] }
+    | { type: 'SEARCH_SUCCESS'; payload: { results: ScoredCandidate[]; requestId: string } }
     | { type: 'SEARCH_ERROR'; payload: { message: string; code?: string } }
     | { type: 'RESET' };
 
@@ -40,6 +41,7 @@ const initialState: SearchState = {
     image: null,
     imagePreview: null,
     prompt: '',
+    requestId: null,
 };
 
 function searchReducer(state: SearchState, action: SearchAction): SearchState {
@@ -74,8 +76,9 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
         case 'SEARCH_SUCCESS':
             return {
                 ...state,
-                status: action.payload.length > 0 ? 'success' : 'empty',
-                results: action.payload,
+                status: action.payload.results.length > 0 ? 'success' : 'empty',
+                results: action.payload.results,
+                requestId: action.payload.requestId,
             };
         case 'SEARCH_ERROR':
             return {
@@ -144,7 +147,13 @@ export function useSearchController() {
             const result = await apiClient.searchProducts(state.image, apiKey, state.prompt);
 
             if (result.data) {
-                dispatch({ type: 'SEARCH_SUCCESS', payload: result.data.results });
+                dispatch({
+                    type: 'SEARCH_SUCCESS',
+                    payload: {
+                        results: result.data.results,
+                        requestId: result.meta.requestId
+                    }
+                });
             } else {
                 dispatch({ type: 'SEARCH_ERROR', payload: { message: 'Unexpected API response format.' } });
             }

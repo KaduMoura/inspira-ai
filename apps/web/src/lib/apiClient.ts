@@ -114,5 +114,48 @@ export const apiClient = {
                 message: error.message || 'Failed to reset config',
             };
         }
+    },
+
+    /**
+     * Fetches the recent telemetry events.
+     */
+    async getTelemetry(adminToken: string): Promise<ApiResponse<any[]>> {
+        try {
+            const response = await fetch(`${BASE_URL}/api/telemetry`, {
+                headers: {
+                    'x-admin-token': adminToken,
+                },
+            });
+            return response.json();
+        } catch (error: any) {
+            throw {
+                code: 'NETWORK_ERROR',
+                message: error.message || 'Failed to fetch telemetry',
+            };
+        }
+    },
+
+    /**
+     * Submits user feedback for a specific search request.
+     */
+    async submitFeedback(
+        requestId: string,
+        feedback: { items: Record<string, 'thumbs_up' | 'thumbs_down'>, notes?: string }
+    ): Promise<ApiResponse<{ success: boolean }>> {
+        try {
+            const response = await fetch(`${BASE_URL}/api/feedback/${requestId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ feedback }),
+            });
+            return response.json();
+        } catch (error: any) {
+            throw {
+                code: 'NETWORK_ERROR',
+                message: error.message || 'Failed to submit feedback',
+            };
+        }
     }
 };

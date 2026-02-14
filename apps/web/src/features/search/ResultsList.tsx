@@ -8,9 +8,10 @@ import { Loader2, SearchX, Lightbulb } from "lucide-react";
 interface ResultsListProps {
     results: ScoredCandidate[];
     status: SearchStatus;
+    requestId: string | null;
 }
 
-export function ResultsList({ results, status }: ResultsListProps) {
+export function ResultsList({ results, status, requestId }: ResultsListProps) {
     if (status === 'uploading' || status === 'analyzing') {
         return (
             <div className="w-full py-20 flex flex-col items-center justify-center space-y-6 animate-pulse">
@@ -79,6 +80,7 @@ export function ResultsList({ results, status }: ResultsListProps) {
                         key={result.id}
                         result={result}
                         rank={index + 1}
+                        requestId={requestId || ''}
                     />
                 ))}
             </div>

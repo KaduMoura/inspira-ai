@@ -137,7 +137,7 @@ export default function HomePage() {
                     )}
                 </div>
 
-                <ResultsList results={results} status={status} />
+                <ResultsList results={results} status={status} requestId={useSearchController().requestId} />
             </section>
 
             <footer className="py-12 text-sm text-muted-foreground text-center w-full">

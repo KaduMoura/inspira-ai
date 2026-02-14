@@ -1,14 +1,36 @@
-import { BadgeCheck, Info } from "lucide-react";
+import { BadgeCheck, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useState } from "react";
 import { ScoredCandidate, MatchBand } from "@/types/domain";
 import { cn } from "@/lib/utils";
+import { apiClient } from "@/lib/apiClient";
 
 interface ResultCardProps {
     result: ScoredCandidate;
     rank: number;
+    requestId: string;
     className?: string;
 }
 
-export function ResultCard({ result, rank, className }: ResultCardProps) {
+export function ResultCard({ result, rank, requestId, className }: ResultCardProps) {
+    const [feedback, setFeedback] = useState<'thumbs_up' | 'thumbs_down' | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleFeedback = async (rating: 'thumbs_up' | 'thumbs_down') => {
+        if (isSubmitting || feedback === rating) return;
+
+        setIsSubmitting(true);
+        try {
+            await apiClient.submitFeedback(requestId, {
+                items: { [result.id]: rating }
+            });
+            setFeedback(rating);
+        } catch (error) {
+            console.error("Failed to submit feedback", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const bandColors: Record<MatchBand, string> = {
         [MatchBand.HIGH]: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
         [MatchBand.MEDIUM]: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
@@ -60,13 +82,44 @@ export function ResultCard({ result, rank, className }: ResultCardProps) {
             </div>
 
             {result.reasons.length > 0 && (
-                <div className="pt-3 border-t border-border/50 flex flex-wrap gap-1.5">
-                    {result.reasons.slice(0, 3).map((reason, i) => (
-                        <div key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/50 text-[10px] text-muted-foreground">
-                            <BadgeCheck className="w-3 h-3 text-emerald-500" />
-                            {reason}
-                        </div>
-                    ))}
+                <div className="pt-3 border-t border-border/50 flex flex-wrap gap-1.5 justify-between items-center">
+                    <div className="flex flex-wrap gap-1.5 flex-1">
+                        {result.reasons.slice(0, 3).map((reason, i) => (
+                            <div key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/50 text-[10px] text-muted-foreground">
+                                <BadgeCheck className="w-3 h-3 text-emerald-500" />
+                                {reason}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0 ml-4">
+                        <button
+                            onClick={() => handleFeedback('thumbs_up')}
+                            disabled={isSubmitting}
+                            className={cn(
+                                "p-1.5 rounded-lg transition-all",
+                                feedback === 'thumbs_up'
+                                    ? "bg-emerald-500/10 text-emerald-600"
+                                    : "hover:bg-secondary text-muted-foreground"
+                            )}
+                            title="Match is accurate"
+                        >
+                            <ThumbsUp className={cn("w-4 h-4", feedback === 'thumbs_up' && "fill-current")} />
+                        </button>
+                        <button
+                            onClick={() => handleFeedback('thumbs_down')}
+                            disabled={isSubmitting}
+                            className={cn(
+                                "p-1.5 rounded-lg transition-all",
+                                feedback === 'thumbs_down'
+                                    ? "bg-destructive/10 text-destructive"
+                                    : "hover:bg-secondary text-muted-foreground"
+                            )}
+                            title="Not what I was looking for"
+                        >
+                            <ThumbsDown className={cn("w-4 h-4", feedback === 'thumbs_down' && "fill-current")} />
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

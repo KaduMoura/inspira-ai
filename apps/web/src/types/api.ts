@@ -35,3 +35,30 @@ export interface SearchResponseData {
     };
     results: ScoredCandidate[];
 }
+
+export interface TelemetryEvent {
+    requestId: string;
+    timestamp: string;
+    timings: {
+        totalMs: number;
+        stage1Ms: number;
+        mongoMs: number;
+        stage2Ms: number;
+    };
+    counts: {
+        retrieved: number;
+        reranked: number;
+        returned: number;
+    };
+    fallbacks: {
+        visionFallback: boolean;
+        rerankFallback: boolean;
+        broadRetrieval: boolean;
+    };
+    error: string | null;
+    retrievalPlan?: string;
+    feedback?: {
+        items: Record<string, 'thumbs_up' | 'thumbs_down'>;
+        notes?: string;
+    };
+}
