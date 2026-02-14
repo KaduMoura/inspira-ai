@@ -77,7 +77,7 @@ In `apps/api/package.json`:
 In `apps/web/package.json`:
 
 - `pnpm dev`  
-  Runs Vite dev server.
+  Runs Next.js dev server.
 
 - `pnpm build`  
   Builds the production bundle.

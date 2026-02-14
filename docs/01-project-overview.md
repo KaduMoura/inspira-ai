@@ -87,9 +87,9 @@ CHANGELOG must include:
   - Search endpoint (multipart, containing image + prompt + params)
   - AI → Mongo → ranking pipeline orchestration
   - Admin endpoint(s) for reading/updating parameters
-- **Frontend React + TypeScript**
+- **Frontend Next.js (App Router) + TypeScript**
   - Main page (upload + prompt + results)
-  - Admin page/tab (configuration)
+  - Admin page (configuration)
   - API key stored only in memory (state)
 
 #### What Qualifies as Acceptable Matching
@@ -286,23 +286,22 @@ Behavior:
 ### Stack Alignment
 
 Frontend:
-- React + TypeScript
-- Vite or Next.js
+- Next.js (App Router) + TypeScript
+- Tailwind CSS
 
 Backend:
 - Node.js + TypeScript
-- Fastify or Express (NestJS optional)
+- Fastify (recommended) or Express
 
 AI:
 - Google Gemini API (two stages)
-- Optional LangChain
 
 Database:
 - Official MongoDB driver (read-only)
 
 Tooling:
 - ESLint + Prettier
-- Vitest/Jest
+- Vitest
 - Docker + docker-compose
 - Basic CI (lint/test/build)
 

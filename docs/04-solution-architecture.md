@@ -14,7 +14,7 @@ The architecture is intentionally:
 ## 04.1 Macro View (Frontend, Backend, Integrations)
 
 ### High-Level Components
-1. **Web App (React + TypeScript)**  
+1. **Web App (Next.js App Router + TypeScript)**  
    - End-user search UI: image upload, optional prompt, results rendering
    - Admin UI: configure retrieval/ranking parameters
    - Runtime API key input (in-memory only)

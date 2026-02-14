@@ -129,7 +129,7 @@ A paragraph that restates the goal:
 
 #### B) Architecture (macro)
 A simple diagram or bullet flow:
-- Frontend (React) → API (Node) → Mongo read-only
+- Frontend (Next.js) → API (Node) → Mongo read-only
 - API → AI provider (vision + text) for:
   - extracting structured signals
   - producing ranking features

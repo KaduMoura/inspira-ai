@@ -283,7 +283,6 @@ Contract tests should assert:
 Use a test runner aligned with Node + TS, such as:
 
 * **Vitest** (fast, modern)
-* **Jest** (also fine)
 
 For HTTP tests:
 

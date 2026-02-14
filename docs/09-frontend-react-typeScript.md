@@ -22,22 +22,15 @@ This document covers only the **end-user UI**.
 - Keep state local and explicit (avoid over-architecture).
 - Make API integration predictable and typed.
 
-### Recommended App Shape (Two viable options)
-#### Option A — Vite SPA (Recommended for simplicity)
-- React Router (or a minimal router)
-- Routes:
-  - `/` (Search)
-  - `/admin` (Admin, internal)
-- Fast iteration, minimal server setup.
+### Framework Choice: Next.js (App Router)
+The frontend is built using **Next.js** with the **App Router**, aligning with common modern industry standards and specific job requirements.
 
-#### Option B — Next.js (If you want to align with job stack)
-- App Router:
-  - `/` (Search)
-  - `/admin` (Admin)
-- Still keep it a client-heavy UI with server API separated.
-
-> Either option is acceptable; for the assessment, **simplicity and clarity** matter more than framework choice.
-> If you choose Next.js, avoid adding unnecessary server-side complexity.
+- **Primary Routes**:
+  - `/` (Search Page: upload, prompt, and results)
+  - `/admin` (Admin Panel: configuration and tuning)
+- **Rendering Strategy**: 
+  - Primarily **Client Components** for the interactive search flow.
+  - Minimal server-side logic (the Backend is a separate Node process).
 
 ---
 

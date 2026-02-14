@@ -54,28 +54,20 @@ This document defines how the project is containerized (Docker), how local multi
 ---
 
 ### 15.1.3 Frontend Dockerfile (apps/web)
-Two common approaches:
+The recommended approach for Next.js is the **Standalone** output mode, which produces a minimal Node.js server to host the application.
 
-#### Option A — Static build + Nginx (recommended for “demo/prod”)
-- Stage 1: build the React app (`pnpm build`)
-- Stage 2: serve static files with Nginx
-- Advantages:
-  - Very small image
-  - No Node runtime needed
-  - Simpler and robust
+**Key characteristics**
+- Multi-stage:
+  1) **deps**: install dependencies.
+  2) **build**: run `next build`.
+  3) **runtime**: copy `.next/standalone` and `.next/static`.
+- Final image runs `node server.js`.
+- Much smaller than a full Node image, as it only includes the necessary code.
 
-Considerations:
-- You still need to configure the API base URL.
-- Prefer runtime-injected config through:
-  - a small `/config.json` served by Nginx (generated at container start)
-  - or environment variable substitution in an `env.js` script
-For this test, simplest is:
-- set `VITE_API_BASE_URL` at build time for the demo image
-- and document it clearly
-
-#### Option B — Serve with Node (only if needed)
-- Use Node to serve static files
-- Usually unnecessary for a Vite-built SPA
+**Runtime configuration**
+- Use environment variables to point to the backend:
+  - `NEXT_PUBLIC_API_BASE_URL` (if needed for client-side fetches)
+- Note: `NEXT_PUBLIC_` variables are usually baked at build time. For true runtime config, use a `/api/config` proxy or a browser-side fetch to a known path.
 
 ---
 

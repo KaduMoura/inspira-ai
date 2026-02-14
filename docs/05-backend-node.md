@@ -93,9 +93,11 @@ All endpoints must follow the same structure:
     "maxDescriptionChars": 240,
     "weights": {
       "text": 0.55,
-      "type": 0.25,
+      "type": 0.20,
       "category": 0.15,
-      "dimensions": 0.05
+      "attributes": 0.05,
+      "dimensions": 0.03,
+      "price": 0.02
     },
     "thresholds": {
       "minVisionConfidence": 0.35
