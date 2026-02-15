@@ -49,7 +49,14 @@ async function bootstrap() {
 
         // Middleware
         await server.register(cors, {
-            origin: env.CORS_ORIGIN,
+            origin: (origin, cb) => {
+                const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
+                if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+                    cb(null, true);
+                    return;
+                }
+                cb(new Error("Not allowed by CORS"), false);
+            },
             methods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token', 'x-ai-api-key'],
         });

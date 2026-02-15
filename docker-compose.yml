@@ -9,6 +9,8 @@ services:
     command: pnpm install --no-frozen-lockfile
     environment:
       - CI=true
+    env_file:
+      - .env
 
   api:
     build:
@@ -28,7 +30,9 @@ services:
       - PORT=4000
       - NODE_ENV=development
       - MONGO_URI=${MONGO_URI}
-      - CORS_ORIGIN=http://localhost:3000
+      - CORS_ORIGIN=${CORS_ORIGIN}
+    env_file:
+      - .env
 
   web:
     build:
@@ -46,3 +50,5 @@ services:
     environment:
       - CI=true
       - NODE_ENV=development
+    env_file:
+      - .env
