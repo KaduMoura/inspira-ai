@@ -50,5 +50,3 @@ services:
     environment:
       - CI=true
       - NODE_ENV=development
-    env_file:
-      - .env
