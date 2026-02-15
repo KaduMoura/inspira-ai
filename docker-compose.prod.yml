@@ -6,6 +6,19 @@ services:
     environment:
       - CI=true
       - NODE_ENV=production
+      - MONGO_URI=${MONGO_URI}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      # AI Config
+      - STAGE1_TIMEOUT_MS=${STAGE1_TIMEOUT_MS}
+      - STAGE2_TIMEOUT_MS=${STAGE2_TIMEOUT_MS}
+      - TOTAL_TIMEOUT_MS=${TOTAL_TIMEOUT_MS}
+      - MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - AI_PROVIDER=${AI_PROVIDER}
+      - GEMINI_MODEL_VISION=${GEMINI_MODEL_VISION}
+      - GEMINI_MODEL_RERANK=${GEMINI_MODEL_RERANK}
+      - AI_RETRY_MAX=${AI_RETRY_MAX}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
 
   web:
     build:
