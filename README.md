@@ -6,6 +6,11 @@ This project was built as a technical assessment, focusing on **retrieval qualit
 
 For a deep dive into the system architecture, design choices, and evaluation methodology, please refer to the [Technical Assessment Response](./docs/18-technical-assessment-response.md).
 
+## 🤖 Telegram Chatbot
+
+A companion Telegram chatbot is available, powered by **Google Gemini**. The bot acts as an agent, utilizing this application's backend to process furniture searches and queries.
+
+**Link:** [InspiraAI Chatbot](https://t.me/InspiraAI_chatbot)
 
 ---
 
