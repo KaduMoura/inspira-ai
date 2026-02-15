@@ -30,3 +30,9 @@ services:
       - CI=true
       - NODE_ENV=production
       - API_URL=http://api:4000
+    networks:
+      - kassa-network
+
+networks:
+  kassa-network:
+    driver: bridge
