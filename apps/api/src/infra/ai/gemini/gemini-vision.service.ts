@@ -17,7 +17,7 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
 
         const generationConfig: GenerationConfig = {
             temperature: config?.temperature ?? 0.1,
-            maxOutputTokens: config?.maxOutputTokens ?? 1000,
+            maxOutputTokens: config?.maxOutputTokens ?? 30000,
             responseMimeType: 'application/json',
         };
 

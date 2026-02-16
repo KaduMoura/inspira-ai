@@ -76,7 +76,7 @@ export class ImageSearchService {
                     requestId,
                     config: {
                         temperature: 0.1,
-                        maxOutputTokens: 1000
+                        maxOutputTokens: 30000
                     }
                 }),
                 config.timeoutsMs.stage1,
@@ -213,7 +213,7 @@ export class ImageSearchService {
                         weights: config.weights,
                         config: {
                             temperature: 0.1,
-                            maxOutputTokens: 2000
+                            maxOutputTokens: 30000
                         }
                     }),
                     config.timeoutsMs.stage2,

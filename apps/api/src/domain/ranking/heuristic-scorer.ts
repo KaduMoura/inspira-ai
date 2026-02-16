@@ -16,24 +16,31 @@ export class HeuristicScorer {
 
         console.log(`[HeuristicScorer] Candidate: ${candidate.title} | TextScore: ${textScore.toFixed(3)} (w: ${config.weights.text})`);
 
-        // 2. Category Match
-        const categoryMatch = candidate.category.toLowerCase() === signals.categoryGuess.value.toLowerCase();
+        // 2. Category Match (Stem-based for plural/singular)
+        const categoryMatch = this.stemMatch(candidate.category, signals.categoryGuess.value);
         const categoryScore = categoryMatch ? 1 : 0;
         totalScore += categoryScore * config.weights.category;
         if (categoryMatch) reasons.push('Category match');
 
-        // 3. Type Match
-        const typeMatch = candidate.type.toLowerCase() === signals.typeGuess.value.toLowerCase();
+        console.log(`[HeuristicScorer] Candidate: ${candidate.title} | CatMatch: ${categoryMatch} (stem: "${this.stemPlural(candidate.category)}" vs "${this.stemPlural(signals.categoryGuess.value)}") | CatScore: +${(categoryScore * config.weights.category).toFixed(3)}`);
+
+        // 3. Type Match (Stem-based + partial containment)
+        const typeSignal = signals.typeGuess.value.toLowerCase();
+        const typeCand = candidate.type.toLowerCase();
+        const typeMatch = this.stemMatch(candidate.type, signals.typeGuess.value) ||
+            typeCand.includes(typeSignal) || typeSignal.includes(typeCand);
         const typeScore = typeMatch ? 1 : 0;
         totalScore += typeScore * config.weights.type;
         if (typeMatch) reasons.push('Type match');
+
+        console.log(`[HeuristicScorer] Candidate: ${candidate.title} | TypeMatch: ${typeMatch} (stem: "${this.stemPlural(candidate.type)}" vs "${this.stemPlural(signals.typeGuess.value)}") | TypeScore: +${(typeScore * config.weights.type).toFixed(3)}`);
 
         // 4. Attributes (Style, Material, Color)
         const attributeScore = this.calculateAttributeMatch(candidate, signals);
         totalScore += attributeScore * config.weights.attributes;
         if (attributeScore > 0.5) reasons.push('Visual attributes match');
 
-        console.log(`[HeuristicScorer] Candidate: ${candidate.title} | AttrScore: ${attributeScore.toFixed(3)} (w: ${config.weights.attributes}) | Total: ${totalScore.toFixed(3)}`);
+        console.log(`[HeuristicScorer] Candidate: ${candidate.title} | AttrScore: ${attributeScore.toFixed(3)} (w: ${config.weights.attributes}) | RunningTotal: ${totalScore.toFixed(3)}`);
 
         // 5. Price Proximity (if requested in intent)
         if (signals.intent?.priceMax || signals.intent?.priceMin) {
@@ -137,5 +144,39 @@ export class HeuristicScorer {
 
         if (scores.length === 0) return 0.5; // neutral
         return scores.reduce((a, b) => a + b, 0) / scores.length;
+    }
+
+    /**
+     * Reduces an English word to a rough stem by stripping common plural suffixes.
+     * Handles: -ves→-f, -ies→-y, -ses/-xes/-zes/-ches/-shes→base, -s→base
+     */
+    private stemPlural(word: string): string {
+        const w = word.toLowerCase().trim();
+
+        // shelves → shelf, knives → knife, wolves → wolf
+        if (w.endsWith('ves')) return w.slice(0, -3) + 'f';
+
+        // categories → category, accessories → accessory
+        if (w.endsWith('ies')) return w.slice(0, -3) + 'y';
+
+        // boxes → box, buses → bus, dishes → dish, benches → bench, buzzes → buzz
+        if (w.endsWith('shes') || w.endsWith('ches') || w.endsWith('xes') || w.endsWith('zes') || w.endsWith('ses')) {
+            return w.slice(0, -2);
+        }
+
+        // potatoes → potato, heroes → hero (but not "shoes")
+        if (w.endsWith('oes') && w.length > 4) return w.slice(0, -2);
+
+        // sofas → sofa, chairs → chair, tables → table
+        if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+
+        return w;
+    }
+
+    /**
+     * Compares two strings using stemmed forms for plural-safe matching.
+     */
+    private stemMatch(a: string, b: string): boolean {
+        return this.stemPlural(a) === this.stemPlural(b);
     }
 }

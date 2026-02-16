@@ -46,7 +46,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
 
         const generationConfig: GenerationConfig = {
             temperature: config?.temperature ?? 0.1,
-            maxOutputTokens: config?.maxOutputTokens ?? 2000,
+            maxOutputTokens: config?.maxOutputTokens ?? 30000,
             responseMimeType: 'application/json',
             responseSchema: RERANK_RESPONSE_SCHEMA,
         };
@@ -163,6 +163,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
 
         const generationConfig: GenerationConfig = {
             temperature: 0, // Strict
+            maxOutputTokens: 30000,
             responseMimeType: 'application/json',
             responseSchema: RERANK_RESPONSE_SCHEMA,
         };
