@@ -2,6 +2,17 @@
 
 All notable changes to the Inspira AI project will be documented in this file.
 
+## [1.3.2]
+
+### Added
+- **AI Match Bands**: Implemented `matchBand` classification (HIGH/MEDIUM/LOW) in reranking results based on visual and intent alignment.
+- **Dynamic Intent Filters**: Implemented `$gte`/`$lte` operators for price and dimensions directly in MongoDB queries for precision retrieval.
+
+### Improved
+- **Smart Heuristics**: Added pluralization stemming to category/type matching for more robust heuristic scoring.
+- **Stability**: Extended timeouts (60s) for Stage 2 and JSON repair to prevent pipeline fallbacks.
+- **Performance**: Optimized Gemini prompts and increased `maxOutputTokens` for richer reranking responses.
+
 ## [1.3.1]
 
 ### Improved
